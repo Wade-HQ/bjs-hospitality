@@ -279,7 +279,7 @@ router.get('/bookings/:ref', (req, res) => {
   }
 
   const payments = db.prepare(`
-    SELECT amount, method, status, payment_date FROM payments
+    SELECT amount, payment_method, payment_date, reference FROM booking_payments
     WHERE booking_id = ? ORDER BY payment_date DESC
   `).all(booking.id);
 
