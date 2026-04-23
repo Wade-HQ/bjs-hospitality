@@ -103,7 +103,8 @@ function getBookingById(db, id) {
 router.get('/', requireAuth, (req, res) => {
   const db = getDb();
   const {
-    status, from, to, check_in, check_out, source, room_type_id, guest_id, search,
+    status, payment_status, from, to, check_in, check_out,
+    source, room_type_id, room_type, guest_id, search,
     page = 1, limit = 50
   } = req.query;
 
@@ -112,8 +113,10 @@ router.get('/', requireAuth, (req, res) => {
   let where = 'b.property_id = ?';
 
   if (status) { where += ' AND b.status = ?'; params.push(status); }
+  if (payment_status) { where += ' AND b.payment_status = ?'; params.push(payment_status); }
   if (source) { where += ' AND b.source = ?'; params.push(source); }
-  if (room_type_id) { where += ' AND b.room_type_id = ?'; params.push(room_type_id); }
+  const rtId = room_type_id || room_type;
+  if (rtId) { where += ' AND b.room_type_id = ?'; params.push(rtId); }
   if (guest_id) { where += ' AND b.guest_id = ?'; params.push(guest_id); }
   if (from) { where += ' AND b.check_out >= ?'; params.push(from); }
   if (to) { where += ' AND b.check_in <= ?'; params.push(to); }
