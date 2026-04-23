@@ -127,12 +127,53 @@ export default function DashboardLayout({ children }) {
         className={`fixed lg:static inset-y-0 left-0 z-40 flex flex-col bg-primary text-white transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
         style={{ width: 240, flexShrink: 0 }}
       >
-        {/* Property name */}
-        <div className="px-6 py-5 border-b border-white/10">
-          <div className="text-gold font-bold text-lg leading-tight">
-            {property?.name || 'Loading...'}
-          </div>
-          <div className="text-white/50 text-xs mt-1">Property Management</div>
+        {/* Hotel switcher */}
+        <div className="relative border-b border-white/10" ref={hotelDropdownRef}>
+          <button
+            onClick={() => setHotelOpen(v => !v)}
+            className="w-full px-6 py-5 text-left hover:bg-white/5 transition-colors"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-gold font-bold text-base leading-tight truncate flex items-center gap-2">
+                  <span>{currentHotel.icon}</span>
+                  <span>{property?.name || currentHotel.name}</span>
+                </div>
+                <div className="text-white/50 text-xs mt-1">Property Management</div>
+              </div>
+              <span className={`text-white/40 text-xs transition-transform flex-shrink-0 ${hotelOpen ? 'rotate-180' : ''}`} style={{ fontSize: '0.6rem' }}>▼</span>
+            </div>
+          </button>
+
+          {hotelOpen && (
+            <div className="absolute left-0 right-0 top-full z-50 bg-primary border-t border-white/10 shadow-2xl">
+              {PMS_HOTELS.map(hotel => {
+                const isCurrent = hotel.url === currentOrigin;
+                return (
+                  <button
+                    key={hotel.url}
+                    onClick={() => switchHotel(hotel)}
+                    className={`w-full flex items-center gap-3 px-6 py-3.5 text-left transition-colors ${
+                      isCurrent
+                        ? 'bg-white/10 cursor-default'
+                        : 'hover:bg-white/5 cursor-pointer'
+                    }`}
+                  >
+                    <span className="text-lg">{hotel.icon}</span>
+                    <div className="min-w-0">
+                      <div className={`text-sm font-medium leading-tight ${isCurrent ? 'text-gold' : 'text-white/80'}`}>
+                        {hotel.name}
+                      </div>
+                      {isCurrent && (
+                        <div className="text-white/40 text-xs mt-0.5">Current property</div>
+                      )}
+                    </div>
+                    {isCurrent && <span className="ml-auto text-gold text-xs">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Nav */}
