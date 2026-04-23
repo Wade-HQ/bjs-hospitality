@@ -91,7 +91,7 @@ export default function Bookings() {
     if (!window.confirm('Cancel this booking?')) return;
     setActionLoading(prev => ({ ...prev, [id]: 'cancel' }));
     try {
-      await api.patch(`/api/bookings/${id}/cancel`);
+      await api.post(`/api/bookings/${id}/cancel`);
       addToast('Booking cancelled');
       fetchBookings();
     } catch (err) {
