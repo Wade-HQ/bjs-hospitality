@@ -64,10 +64,14 @@ export default function DashboardLayout({ children }) {
     return () => clearInterval(interval);
   }, []);
 
-  const markRead = async (id) => {
+  const markRead = async (notif) => {
     try {
-      await api.put(`/api/notifications/${id}/read`);
+      await api.put(`/api/notifications/${notif.id}/read`);
       fetchNotifications();
+      if (notif.related_id && notif.related_type === 'booking') {
+        navigate(`/dashboard/bookings/${notif.related_id}`);
+        setNotifOpen(false);
+      }
     } catch (_) {}
   };
 
