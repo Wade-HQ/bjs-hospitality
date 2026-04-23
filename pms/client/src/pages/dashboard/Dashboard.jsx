@@ -124,7 +124,7 @@ export default function Dashboard() {
 
   const currency = property?.currency || 'ZAR';
 
-  const commissionTotal = commissions.reduce((sum, c) => sum + Number(c.amount_due || 0), 0);
+  const commissionTotal = commissions.reduce((sum, c) => sum + Number(c.amount || 0), 0);
 
   const fmt = (n) => Number(n || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
