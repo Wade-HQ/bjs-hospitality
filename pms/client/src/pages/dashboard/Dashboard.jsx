@@ -87,7 +87,7 @@ export default function Dashboard() {
   const handleCheckIn = async (bookingId) => {
     setActionLoading(prev => ({ ...prev, [bookingId]: true }));
     try {
-      await api.patch(`/api/bookings/${bookingId}/check-in`);
+      await api.post(`/api/bookings/${bookingId}/check-in`);
       addToast('Guest checked in successfully');
       fetchAll();
     } catch (err) {
