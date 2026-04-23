@@ -13,6 +13,7 @@ import PropertyDetail from './pages/PropertyDetail.jsx';
 import BookingConfirm from './pages/BookingConfirm.jsx';
 import BookingLookup from './pages/BookingLookup.jsx';
 import Login from './pages/Login.jsx';
+import ChangePassword from './pages/ChangePassword.jsx';
 
 // Dashboard pages
 import Dashboard from './pages/dashboard/Dashboard.jsx';
