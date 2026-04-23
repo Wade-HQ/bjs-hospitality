@@ -34,7 +34,6 @@ export default function Dashboard() {
   const [revenue, setRevenue] = useState(null);
   const [commissions, setCommissions] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [overduePayments, setOverduePayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState({});
 
