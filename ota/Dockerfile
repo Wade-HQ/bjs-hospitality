@@ -26,4 +26,6 @@ COPY . .
 
 EXPOSE 3100
 
+RUN mkdir -p /opt/bjs-hospitality/database /opt/bjs-hospitality/uploads
+
 CMD ["node", "server.js"]
