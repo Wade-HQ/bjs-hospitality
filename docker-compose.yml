@@ -44,6 +44,12 @@ services:
       APP_URL: ${SKY_URL:-https://skyisland.bluejungle.solutions}
       PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
       PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      FROM_EMAIL: ${FROM_EMAIL:-bookings@sunsafaridestinations.co.za}
+      FROM_NAME: ${FROM_NAME:-Sun Safari Destinations}
     volumes:
       - bjs-data:/opt/bjs-hospitality
     labels:
