@@ -248,14 +248,12 @@ export default function Dashboard() {
                     >
                       {b.guest_name}
                     </div>
-                    <div className="text-xs text-gray-400">Room {b.room_number || b.room_name}</div>
-                    {Number(b.balance_due) > 0 && (
-                      <div className="text-xs text-red-500 font-semibold mt-0.5">
-                        Outstanding: {currency} {fmt(b.balance_due)}
-                      </div>
+                    <div className="text-xs text-gray-400">{b.room_number ? `Room ${b.room_number}` : b.room_type_name}</div>
+                    {b.payment_status === 'unpaid' && (
+                      <div className="text-xs text-red-500 font-semibold mt-0.5">Payment outstanding</div>
                     )}
                   </div>
-                  {Number(b.balance_due) > 0 && (
+                  {b.payment_status === 'unpaid' && (
                     <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Unpaid</span>
                   )}
                   <button
