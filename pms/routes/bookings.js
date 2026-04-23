@@ -140,8 +140,11 @@ router.get('/', requireAuth, (req, res) => {
            b.adults, b.children, b.status, b.payment_status,
            b.total_amount, b.currency, b.room_rate,
            b.commission_amount, b.net_to_property,
+           b.room_id, b.room_type_id,
            b.created_at, b.updated_at,
-           g.first_name, g.last_name, g.email as guest_email, g.phone as guest_phone, g.vip_flag,
+           g.first_name, g.last_name,
+           (g.first_name || ' ' || g.last_name) as guest_name,
+           g.email as guest_email, g.phone as guest_phone, g.vip_flag,
            r.room_number, rt.name as room_type_name
     FROM bookings b
     LEFT JOIN guests g ON g.id = b.guest_id
