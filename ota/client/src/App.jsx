@@ -58,6 +58,7 @@ export default function App() {
             <Route path="/booking/lookup" element={<BookingLookup />} />
             <Route path="/booking/:ref" element={<BookingLookup />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/change-password" element={<ChangePassword />} />
 
             {/* Dashboard (protected) */}
             <Route
