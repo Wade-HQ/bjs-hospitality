@@ -311,12 +311,14 @@ export default function Dashboard() {
                   onClick={() => navigate(`/dashboard/bookings/${c.booking_id}`)}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-primary truncate">{c.guest_name || c.booking_ref}</div>
-                    <div className="text-xs text-gray-400">{c.commission_type || 'OTA'} &bull; Due: {c.due_date?.slice(0,10) || '—'}</div>
+                    <div className="text-sm font-medium text-primary truncate">
+                      {c.first_name ? `${c.first_name} ${c.last_name}` : c.booking_ref}
+                    </div>
+                    <div className="text-xs text-gray-400">OTA &bull; Due: {c.due_date?.slice(0,10) || '—'}</div>
                   </div>
                   <StatusBadge status={c.status} />
                   <span className="text-sm font-semibold text-primary whitespace-nowrap">
-                    {currency} {fmt(c.amount_due)}
+                    {currency} {fmt(c.amount)}
                   </span>
                 </div>
               ))}
