@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../db/index');
 const { createNotification } = require('../utils/notifications');
+const { sendBookingConfirmation, sendNewBookingAlert, sendBookingCancellation } = require('../utils/email');
 
 // GET /api/public/properties
 router.get('/properties', (req, res) => {
