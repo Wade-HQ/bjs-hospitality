@@ -45,7 +45,7 @@ export default function Bookings() {
   }, [filters]);
 
   useEffect(() => {
-    api.get('/api/room-types').then(res => setRoomTypes(res.data || [])).catch(() => {});
+    api.get('/api/room-types').then(res => setRoomTypes(res.data?.room_types || [])).catch(() => {});
   }, []);
 
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
