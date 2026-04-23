@@ -12,7 +12,7 @@ export default function Invoices() {
   const [status, setStatus] = useState('');
   const { addToast } = useToast();
 
-  const load = () => api.get('/api/invoices', { params: { page, limit: 25, status } }).then(r => { setInvoices(r.data.invoices || []); setTotal(r.data.total || 0); });
+  const load = () => api.get('/api/invoices', { params: { page, limit: 25, status } }).then(r => { setInvoices(r.data.invoices || []); setTotal(r.data.pagination?.total || 0); });
   useEffect(load, [page, status]);
 
   const download = async (inv) => {
