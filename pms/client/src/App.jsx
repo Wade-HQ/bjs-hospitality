@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { ToastProvider } from './contexts/ToastContext.jsx';
 import { PropertyProvider } from './contexts/PropertyContext.jsx';
 import DashboardLayout from './components/DashboardLayout.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 import Login from './pages/Login.jsx';
 import ChangePassword from './pages/ChangePassword.jsx';
