@@ -58,6 +58,21 @@ router.get('/', requireAuth, (req, res) => {
   return res.json({ bookings, blocks });
 });
 
+// GET /api/availability/blocks
+router.get('/blocks', requireAuth, (req, res) => {
+  const db = getDb();
+  const blocks = db.prepare(`
+    SELECT ab.id, ab.room_id, ab.start_date, ab.end_date, ab.reason, ab.notes, ab.created_at,
+           r.room_number, rt.name as room_type_name
+    FROM availability_blocks ab
+    JOIN rooms r ON r.id = ab.room_id
+    LEFT JOIN room_types rt ON rt.id = r.room_type_id
+    WHERE ab.property_id = ?
+    ORDER BY ab.start_date DESC
+  `).all(PROPERTY_ID());
+  return res.json({ blocks });
+});
+
 // POST /api/availability/blocks
 router.post('/blocks', requireAuth, requireRole('owner','hotel_manager','front_desk'), (req, res) => {
   const db = getDb();
