@@ -163,9 +163,9 @@ export default function Dashboard() {
       {/* Revenue row */}
       {revenue && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard title="Today's Revenue" value={`${currency} ${fmt(revenue.today)}`} color="green" />
-          <StatCard title="This Week" value={`${currency} ${fmt(revenue.this_week)}`} color="teal" />
-          <StatCard title="This Month" value={`${currency} ${fmt(revenue.this_month)}`} color="gold" />
+          <StatCard title="This Month Revenue" value={`${currency} ${fmt(revenue.gross_revenue)}`} color="green" />
+          <StatCard title="Net to Property" value={`${currency} ${fmt(revenue.net_revenue)}`} color="teal" />
+          <StatCard title="Bookings This Month" value={revenue.booking_count || 0} sub={`${revenue.total_nights || 0} nights`} color="gold" />
         </div>
       )}
 
