@@ -46,6 +46,28 @@ export default function DashboardLayout({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [datetime, setDatetime] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hotelOpen, setHotelOpen] = useState(false);
+  const hotelDropdownRef = useRef(null);
+
+  const currentOrigin = window.location.origin;
+  const currentHotel = PMS_HOTELS.find(h => h.url === currentOrigin) || PMS_HOTELS[0];
+
+  const switchHotel = (hotel) => {
+    setHotelOpen(false);
+    if (hotel.url === currentOrigin) return;
+    window.location.href = hotel.url + window.location.pathname + window.location.search;
+  };
+
+  // Close hotel dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (hotelDropdownRef.current && !hotelDropdownRef.current.contains(e.target)) {
+        setHotelOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   useEffect(() => {
     const tz = property?.timezone || 'Africa/Johannesburg';
