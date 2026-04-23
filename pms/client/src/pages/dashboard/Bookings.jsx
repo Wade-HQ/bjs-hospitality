@@ -36,7 +36,7 @@ export default function Bookings() {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
       const res = await api.get(`/api/bookings?${params.toString()}`);
-      setBookings(res.data || []);
+      setBookings(res.data?.bookings || []);
     } catch (err) {
       addToast('Failed to load bookings', 'error');
     } finally {
