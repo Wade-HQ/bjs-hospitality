@@ -14,8 +14,12 @@ export default function Login() {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const data = await login(email, password);
+      if (data?.user?.force_password_change) {
+        navigate('/change-password');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (e) {
       setError(e.response?.data?.error || 'Invalid email or password');
       setLoading(false);
