@@ -11,8 +11,8 @@ export default function Rates() {
   const [form, setForm] = useState({});
   const { addToast } = useToast();
 
-  const load = () => api.get('/api/rates').then(r => setRates(r.data));
-  useEffect(() => { load(); api.get('/api/room-types').then(r => setRoomTypes(r.data)); }, []);
+  const load = () => api.get('/api/rates').then(r => setRates(r.data?.rates || []));
+  useEffect(() => { load(); api.get('/api/room-types').then(r => setRoomTypes(r.data?.room_types || [])); }, []);
 
   const openNew = () => { setEditing(null); setForm({ name:'', room_type_id:'', rate_per_night:'', valid_from:'', valid_to:'', min_nights:1, channel:'all', active:1 }); setModal(true); };
   const openEdit = (r) => { setEditing(r); setForm(r); setModal(true); };
