@@ -96,14 +96,14 @@ export default function BookingCalendar({ mode = 'booking', onNewBooking }) {
         api.get('/api/room-types'),
         api.get(`/api/bookings?from=${formatDate(startDate)}&to=${formatDate(endDate)}`),
       ]);
-      setRooms(roomsRes.data || []);
-      setRoomTypes(roomTypesRes.data || []);
-      setBookings(bookingsRes.data || []);
+      setRooms(roomsRes.data?.rooms || []);
+      setRoomTypes(roomTypesRes.data?.room_types || []);
+      setBookings(bookingsRes.data?.bookings || []);
 
       if (mode === 'availability') {
         try {
-          const blocksRes = await api.get(`/api/availability/blocks?from=${formatDate(startDate)}&to=${formatDate(endDate)}`);
-          setBlocks(blocksRes.data || []);
+          const blocksRes = await api.get(`/api/availability/blocks`);
+          setBlocks(blocksRes.data?.blocks || []);
         } catch (_) {}
       }
     } catch (err) {
