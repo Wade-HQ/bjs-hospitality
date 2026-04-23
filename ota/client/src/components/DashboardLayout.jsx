@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import api from '../api/index.js';
+import ErrorBoundary from './ErrorBoundary.jsx';
 
 const NAV_ITEMS = [
   { label: 'Dashboard',    path: '/dashboard',               icon: '⊞' },
