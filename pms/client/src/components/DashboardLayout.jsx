@@ -66,14 +66,14 @@ export default function DashboardLayout({ children }) {
 
   const markRead = async (id) => {
     try {
-      await api.patch(`/api/notifications/${id}/read`);
+      await api.put(`/api/notifications/${id}/read`);
       fetchNotifications();
     } catch (_) {}
   };
 
   const markAllRead = async () => {
     try {
-      await api.patch('/api/notifications/read-all');
+      await api.put('/api/notifications/read-all');
       fetchNotifications();
       setNotifOpen(false);
     } catch (_) {}
