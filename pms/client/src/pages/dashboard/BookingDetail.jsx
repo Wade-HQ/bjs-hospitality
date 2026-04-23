@@ -66,7 +66,7 @@ export default function BookingDetail() {
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h2 className="font-semibold text-gray-600 text-sm mb-3 uppercase tracking-wide">Guest</h2>
-          <Link to={`/dashboard/guests/${b.guest_id}`} className="text-teal font-medium hover:underline block mb-2">{b.guest_first_name} {b.guest_last_name}</Link>
+          <Link to={`/dashboard/guests/${b.guest_id}`} className="text-teal font-medium hover:underline block mb-2">{b.first_name} {b.last_name}</Link>
           <dl className="space-y-1 text-sm">
             {[['Email', b.guest_email||'—'],['Phone', b.guest_phone||'—']].map(([k,v]) => (
               <div key={k} className="flex justify-between"><dt className="text-gray-400">{k}</dt><dd>{v}</dd></div>
