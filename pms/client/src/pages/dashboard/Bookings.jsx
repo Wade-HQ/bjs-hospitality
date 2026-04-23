@@ -62,7 +62,7 @@ export default function Bookings() {
     e.stopPropagation();
     setActionLoading(prev => ({ ...prev, [id]: 'checkin' }));
     try {
-      await api.patch(`/api/bookings/${id}/check-in`);
+      await api.post(`/api/bookings/${id}/check-in`);
       addToast('Checked in');
       fetchBookings();
     } catch (err) {
