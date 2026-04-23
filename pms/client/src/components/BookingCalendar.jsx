@@ -228,7 +228,7 @@ export default function BookingCalendar({ mode = 'booking', onNewBooking }) {
     if (!selectedBooking) return;
     setActionLoading(true);
     try {
-      await api.patch(`/api/bookings/${selectedBooking.id}/check-out`);
+      await api.post(`/api/bookings/${selectedBooking.id}/check-out`);
       addToast('Checked out successfully');
       setSidebarOpen(false);
       fetchData();
