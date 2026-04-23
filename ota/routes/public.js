@@ -248,6 +248,33 @@ router.post('/bookings', (req, res) => {
     bookingId, 'booking'
   );
 
+  // Send emails (non-blocking)
+  const emailData = {
+    guest_email:          guest.email,
+    first_name:           guest.first_name,
+    last_name:            guest.last_name,
+    guest_phone:          guest.phone || '',
+    booking_ref,
+    property_name:        property.name,
+    property_email:       property.contact_email,
+    property_phone:       property.contact_phone || '',
+    payment_instructions: property.payment_instructions || '',
+    room_type_name:       roomType.name,
+    room_number:          null,
+    check_in,
+    check_out,
+    nights,
+    adults,
+    children:             children || 0,
+    total_amount:         total,
+    currency:             property.currency,
+    payment_status:       'unpaid',
+    special_requests:     special_requests || '',
+    source:               'online',
+  };
+  sendBookingConfirmation(emailData).catch(() => {});
+  sendNewBookingAlert(emailData).catch(() => {});
+
   return res.status(201).json({
     booking_ref,
     booking_id: bookingId,
