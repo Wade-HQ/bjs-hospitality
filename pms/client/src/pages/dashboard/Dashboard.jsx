@@ -112,7 +112,7 @@ export default function Dashboard() {
 
   const markNotifRead = async (id) => {
     try {
-      await api.patch(`/api/notifications/${id}/read`);
+      await api.put(`/api/notifications/${id}/read`);
       setNotifications(prev => prev.filter(n => n.id !== id));
     } catch (_) {}
   };
