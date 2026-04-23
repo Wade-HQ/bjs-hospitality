@@ -307,6 +307,23 @@ router.post('/:id/cancel', (req, res) => {
     'Booking Cancelled', `Booking ${booking.booking_ref} cancelled${reason ? ': ' + reason : ''}`,
     booking.id, 'booking');
 
+  // Send cancellation email to guest (non-blocking)
+  const guest    = db.prepare(`SELECT first_name, last_name, email FROM guests WHERE id = ?`).get(booking.guest_id);
+  const property = db.prepare(`SELECT name, contact_email, contact_phone FROM properties WHERE id = ?`).get(booking.property_id);
+  if (guest && property) {
+    sendBookingCancellation({
+      guest_email:   guest.email,
+      first_name:    guest.first_name,
+      booking_ref:   booking.booking_ref,
+      property_name: property.name,
+      property_email: property.contact_email,
+      property_phone: property.contact_phone,
+      check_in:      booking.check_in,
+      check_out:     booking.check_out,
+      reason:        reason || null,
+    }).catch(() => {});
+  }
+
   return res.json({ ok: true, status: 'cancelled' });
 });
 
