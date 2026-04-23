@@ -15,8 +15,12 @@ export default function Login() {
     setError(null);
     setLoading(true);
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const data = await login(email, password);
+      if (data?.user?.force_password_change) {
+        navigate('/change-password');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid email or password. Please try again.');
     } finally {
