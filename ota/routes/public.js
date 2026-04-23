@@ -254,4 +254,59 @@ router.post('/bookings', (req, res) => {
   });
 });
 
+// GET /api/public/bookings/:ref?email=
+router.get('/bookings/:ref', (req, res) => {
+  const db = getDb();
+  const { ref } = req.params;
+  const { email } = req.query;
+
+  const booking = db.prepare(`
+    SELECT b.*, g.first_name, g.last_name, g.email as guest_email,
+           g.phone, rt.name as room_type_name, p.name as property_name,
+           p.currency as property_currency
+    FROM bookings b
+    JOIN guests g ON g.id = b.guest_id
+    JOIN room_types rt ON rt.id = b.room_type_id
+    JOIN properties p ON p.id = b.property_id
+    WHERE b.booking_ref = ?
+  `).get(ref);
+
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+  // If email provided, verify it matches
+  if (email && booking.guest_email.toLowerCase() !== email.toLowerCase()) {
+    return res.status(403).json({ error: 'Email does not match booking' });
+  }
+
+  const payments = db.prepare(`
+    SELECT amount, method, status, payment_date FROM payments
+    WHERE booking_id = ? ORDER BY payment_date DESC
+  `).all(booking.id);
+
+  return res.json({
+    booking: {
+      booking_ref: booking.booking_ref,
+      status: booking.status,
+      payment_status: booking.payment_status,
+      check_in: booking.check_in,
+      check_out: booking.check_out,
+      nights: booking.nights,
+      adults: booking.adults,
+      children: booking.children,
+      room_type_name: booking.room_type_name,
+      property_name: booking.property_name,
+      total_amount: booking.total_amount,
+      currency: booking.property_currency,
+      special_requests: booking.special_requests,
+      guest: {
+        first_name: booking.first_name,
+        last_name: booking.last_name,
+        email: booking.guest_email,
+        phone: booking.phone
+      },
+      payments
+    }
+  });
+});
+
 module.exports = router;
