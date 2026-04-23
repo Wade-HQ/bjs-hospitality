@@ -31,7 +31,9 @@ function ProtectedLayout() {
   if (!user) return <Navigate to="/login" replace />;
   return (
     <DashboardLayout>
-      <Outlet />
+      <ErrorBoundary>
+        <Outlet />
+      </ErrorBoundary>
     </DashboardLayout>
   );
 }
