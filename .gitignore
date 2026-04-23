@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.sky-island
+.env.membene
+uploads/
+*.log
+.DS_Store

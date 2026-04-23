@@ -1,0 +1,97 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import api from '../../api/index.js';
+import StatusBadge from '../../components/StatusBadge.jsx';
+import { useToast } from '../../contexts/ToastContext.jsx';
+
+export default function GuestProfile() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { addToast } = useToast();
+  const [guest, setGuest] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({});
+
+  const load = () => {
+    api.get(`/api/guests/${id}`).then(r => { setGuest(r.data); setForm(r.data); });
+    api.get('/api/bookings', { params: { guest_id: id } }).then(r => setBookings(r.data.bookings || []));
+  };
+  useEffect(load, [id]);
+
+  const save = async () => {
+    try { await api.put(`/api/guests/${id}`, form); addToast('Guest updated'); setEditing(false); load(); }
+    catch (e) { addToast(e.response?.data?.error || 'Error', 'error'); }
+  };
+
+  if (!guest) return <div className="p-12 text-center text-gray-400">Loading…</div>;
+
+  const fields = [
+    { k:'first_name', l:'First Name' },{ k:'last_name', l:'Last Name' },
+    { k:'email', l:'Email', t:'email' },{ k:'phone', l:'Phone' },
+    { k:'nationality', l:'Nationality' },{ k:'date_of_birth', l:'Date of Birth', t:'date' },
+    { k:'address', l:'Address' },{ k:'city', l:'City' },{ k:'country', l:'Country' },
+    { k:'id_type', l:'ID Type' },{ k:'id_number', l:'ID Number' },{ k:'id_expiry', l:'ID Expiry', t:'date' },
+  ];
+
+  return (
+    <div className="max-w-5xl">
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-gray-600 text-xl">←</button>
+        <h1 className="text-2xl font-bold text-primary">{guest.first_name} {guest.last_name}</h1>
+        {guest.vip_flag ? <span className="bg-gold text-white text-xs px-2 py-0.5 rounded-full">VIP</span> : null}
+        <button onClick={() => setEditing(!editing)} className="ml-auto text-sm text-teal hover:underline">{editing ? 'Cancel' : 'Edit'}</button>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+        {editing ? (
+          <>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              {fields.map(f => (
+                <div key={f.k}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{f.l}</label>
+                  <input type={f.t||'text'} value={form[f.k]||''} onChange={e => setForm(p=>({...p,[f.k]:e.target.value}))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                </div>
+              ))}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">VIP</label>
+                <input type="checkbox" checked={!!form.vip_flag} onChange={e => setForm(p=>({...p,vip_flag:e.target.checked?1:0}))} className="h-4 w-4" />
+              </div>
+            </div>
+            <textarea placeholder="Notes" value={form.notes||''} onChange={e => setForm(p=>({...p,notes:e.target.value}))} rows={2} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-4" />
+            <button onClick={save} className="bg-gold text-white px-6 py-2 rounded-lg text-sm font-medium">Save</button>
+          </>
+        ) : (
+          <dl className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+            {fields.filter(f => guest[f.k]).map(f => (
+              <div key={f.k}><dt className="text-gray-400 text-xs">{f.l}</dt><dd className="font-medium text-gray-800 mt-0.5">{guest[f.k]}</dd></div>
+            ))}
+            {guest.notes && <div className="col-span-full"><dt className="text-gray-400 text-xs">Notes</dt><dd className="text-gray-700 mt-0.5">{guest.notes}</dd></div>}
+          </dl>
+        )}
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200">
+        <h2 className="font-semibold text-gray-700 p-4 border-b border-gray-100">Booking History ({bookings.length})</h2>
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
+            <tr>{['Ref','Check-in','Check-out','Nights','Total','Status'].map(h => <th key={h} className="px-4 py-3 text-left">{h}</th>)}</tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {bookings.map(b => (
+              <tr key={b.id} className="hover:bg-gray-50">
+                <td className="px-4 py-3"><Link to={`/dashboard/bookings/${b.id}`} className="text-teal font-mono hover:underline">{b.booking_ref}</Link></td>
+                <td className="px-4 py-3 text-gray-600">{b.check_in}</td>
+                <td className="px-4 py-3 text-gray-600">{b.check_out}</td>
+                <td className="px-4 py-3">{b.nights}</td>
+                <td className="px-4 py-3 font-medium">{b.currency} {Number(b.total_amount).toLocaleString()}</td>
+                <td className="px-4 py-3"><StatusBadge status={b.status} /></td>
+              </tr>
+            ))}
+            {bookings.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">No bookings</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

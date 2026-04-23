@@ -1,0 +1,62 @@
+'use strict';
+const { getDb } = require('../db/index');
+
+function requireAuth(req, res, next) {
+  const token = req.cookies && req.cookies.bjs_session;
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const db = getDb();
+  const now = new Date().toISOString();
+
+  const session = db.prepare(`
+    SELECT s.id as session_id, s.token, s.expires_at,
+           u.id, u.name, u.email, u.role, u.property_access_json, u.active, u.force_password_change
+    FROM sessions s
+    JOIN users u ON u.id = s.user_id
+    WHERE s.token = ? AND s.expires_at > ? AND u.active = 1
+  `).get(token, now);
+
+  if (!session) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  let propertyAccess = [];
+  try {
+    propertyAccess = JSON.parse(session.property_access_json || '[]');
+  } catch (e) {
+    propertyAccess = [];
+  }
+
+  const propertyId = parseInt(process.env.PROPERTY_ID, 10);
+  if (!propertyAccess.includes(propertyId)) {
+    return res.status(403).json({ error: 'Forbidden: no access to this property' });
+  }
+
+  req.user = {
+    id: session.id,
+    name: session.name,
+    email: session.email,
+    role: session.role,
+    property_access_json: session.property_access_json,
+    propertyAccess,
+    force_password_change: session.force_password_change
+  };
+
+  next();
+}
+
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden: insufficient role' });
+    }
+    next();
+  };
+}
+
+module.exports = { requireAuth, requireRole };
