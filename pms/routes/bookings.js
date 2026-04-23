@@ -381,12 +381,22 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
   `).run(newBookingId, req.user.id, JSON.stringify({ booking_ref: bookingRef, status: 'confirmed' }));
 
   // Notification
-  const guest = db.prepare('SELECT first_name, last_name FROM guests WHERE id = ?').get(resolvedGuestId);
+  const guest = db.prepare('SELECT first_name, last_name, email FROM guests WHERE id = ?').get(resolvedGuestId);
   createNotification(
     db, 'new_booking', 'New Booking',
     `Booking ${bookingRef} for ${guest.first_name} ${guest.last_name} (${check_in} → ${check_out})`,
     newBookingId, 'bookings'
   );
+
+  // Send guest confirmation email (non-blocking)
+  if (guest.email) {
+    const createdBooking = getBookingById(db, newBookingId);
+    sendBookingConfirmation({
+      ...createdBooking,
+      guest_email: guest.email,
+      first_name:  guest.first_name,
+    }, property).catch(() => {});
+  }
 
   // Optional initial payment
   if (payment_amount && parseFloat(payment_amount) > 0) {
