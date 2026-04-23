@@ -191,12 +191,15 @@ export default function DashboardLayout({ children }) {
                         <div
                           key={n.id}
                           className="flex items-start gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer"
-                          onClick={() => markRead(n.id)}
+                          onClick={() => markRead(n)}
                         >
-                          <span className="mt-0.5 text-base">{n.type === 'arrival' ? '🛬' : n.type === 'departure' ? '🛫' : n.type === 'payment' ? '💰' : '📌'}</span>
+                          <span className="mt-0.5 text-base">{n.type === 'arrival' ? '🛬' : n.type === 'departure' ? '🛫' : n.type === 'payment' ? '💰' : n.type === 'new_booking' ? '📋' : '📌'}</span>
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm text-gray-700 leading-tight">{n.message}</div>
+                            <div className="text-sm text-gray-700 leading-snug">{n.message}</div>
                             <div className="text-xs text-gray-400 mt-0.5">{new Date(n.created_at).toLocaleString()}</div>
+                            {n.related_id && n.related_type === 'booking' && (
+                              <div className="text-xs text-teal mt-0.5 font-medium">View booking →</div>
+                            )}
                           </div>
                         </div>
                       ))
