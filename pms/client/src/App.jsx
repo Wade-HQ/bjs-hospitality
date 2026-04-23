@@ -43,6 +43,7 @@ export default function App() {
           <PropertyProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/change-password" element={<ChangePassword />} />
               <Route element={<ProtectedLayout />}>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<Dashboard />} />
