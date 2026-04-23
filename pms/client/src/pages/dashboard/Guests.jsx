@@ -10,7 +10,7 @@ export default function Guests() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    api.get('/api/guests', { params: { page, limit: 25, search } }).then(r => { setGuests(r.data.guests || []); setTotal(r.data.total || 0); });
+    api.get('/api/guests', { params: { search } }).then(r => { const g = r.data.guests || []; setGuests(g); setTotal(g.length); });
   }, [page, search]);
 
   return (
