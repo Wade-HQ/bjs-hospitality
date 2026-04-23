@@ -17,7 +17,7 @@ export default function NewBooking() {
   });
 
   useEffect(() => {
-    api.get('/api/room-types').then(r => setRoomTypes(r.data));
+    api.get('/api/room-types').then(r => setRoomTypes(r.data?.room_types || []));
   }, []);
 
   useEffect(() => {
