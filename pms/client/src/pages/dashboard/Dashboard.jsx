@@ -44,30 +44,38 @@ export default function Dashboard() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [arrivalsRes, departuresRes, roomsRes, notifRes] = await Promise.all([
-        api.get(`/api/bookings?check_in=${today}&status=confirmed,provisional`),
-        api.get(`/api/bookings?check_out=${today}&status=checked_in`),
+      const [arrDepRes, roomsRes, notifRes] = await Promise.all([
+        api.get(`/api/reports/arrivals-departures?from=${today}&to=${today}`),
         api.get('/api/rooms'),
-        api.get('/api/notifications?read=false'),
+        api.get('/api/notifications?unread=true'),
       ]);
-      setArrivals(arrivalsRes.data || []);
-      setDepartures(departuresRes.data || []);
-      setRooms(roomsRes.data || []);
-      setNotifications((notifRes.data || []).slice(0, 15));
 
-      // Revenue and commissions (non-blocking)
+      const toGuestName = b => `${b.first_name || ''} ${b.last_name || ''}`.trim();
+      setArrivals((arrDepRes.data?.arrivals || []).map(b => ({ ...b, guest_name: toGuestName(b) })));
+      setDepartures((arrDepRes.data?.departures || []).map(b => ({ ...b, guest_name: toGuestName(b) })));
+      setRooms(roomsRes.data?.rooms || []);
+      setNotifications((notifRes.data?.notifications || []).slice(0, 15));
+
+      // Revenue (non-blocking) — show this month's gross revenue
       try {
         const revRes = await api.get(`/api/reports/revenue?year=${currentYear}`);
-        setRevenue(revRes.data);
+        const thisMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+        const monthData = (revRes.data?.monthly || []).find(m => m.month === thisMonth);
+        setRevenue(monthData || null);
       } catch (_) {}
+
+      // Commissions (non-blocking) — fetch due + overdue separately
       try {
-        const commRes = await api.get('/api/commissions?status=due,overdue');
-        setCommissions(commRes.data || []);
+        const [dueRes, overdueRes] = await Promise.all([
+          api.get('/api/commissions?status=due'),
+          api.get('/api/commissions?status=overdue'),
+        ]);
+        setCommissions([
+          ...(dueRes.data?.commissions || []),
+          ...(overdueRes.data?.commissions || []),
+        ]);
       } catch (_) {}
-      try {
-        const overdueRes = await api.get('/api/bookings?payment_overdue=true');
-        setOverduePayments(overdueRes.data || []);
-      } catch (_) {}
+
     } catch (err) {
       addToast('Failed to load dashboard data', 'error');
     } finally {
