@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useProperty } from '../contexts/PropertyContext.jsx';
 import api from '../api/index.js';
+
+const PMS_HOTELS = [
+  { name: 'Sky Island Resort & Safari', icon: '🏔', url: 'https://skyisland.bluejungle.solutions' },
+  { name: 'Ponta Membene', icon: '🌊', url: 'https://membene.bluejungle.solutions' },
+];
 
 const NAV_ITEMS = [
   { label: 'Dashboard', path: '/dashboard', icon: '⊞' },
