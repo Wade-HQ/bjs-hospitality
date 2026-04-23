@@ -244,7 +244,7 @@ export default function BookingCalendar({ mode = 'booking', onNewBooking }) {
     if (!window.confirm('Cancel this booking?')) return;
     setActionLoading(true);
     try {
-      await api.patch(`/api/bookings/${selectedBooking.id}/cancel`);
+      await api.post(`/api/bookings/${selectedBooking.id}/cancel`);
       addToast('Booking cancelled');
       setSidebarOpen(false);
       fetchData();
