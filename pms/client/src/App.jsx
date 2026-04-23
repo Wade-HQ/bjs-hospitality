@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { ToastProvider } from './contexts/ToastContext.jsx';
 import { PropertyProvider } from './contexts/PropertyContext.jsx';
@@ -19,11 +19,19 @@ import Availability from './pages/dashboard/Availability.jsx';
 import Reports from './pages/dashboard/Reports.jsx';
 import Settings from './pages/dashboard/Settings.jsx';
 
-function ProtectedRoute({ children }) {
+function ProtectedLayout() {
   const { user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center h-screen"><div className="text-gray-500">Loading…</div></div>;
+  if (loading) return (
+    <div className="flex items-center justify-center h-screen bg-primary">
+      <div className="text-white/70 text-sm animate-pulse">Loading...</div>
+    </div>
+  );
   if (!user) return <Navigate to="/login" replace />;
-  return children;
+  return (
+    <DashboardLayout>
+      <Outlet />
+    </DashboardLayout>
+  );
 }
 
 export default function App() {
@@ -34,22 +42,20 @@ export default function App() {
           <PropertyProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-                <Route index element={<Navigate to="/dashboard" replace />} />
-              </Route>
-              <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-                <Route index element={<Dashboard />} />
-                <Route path="calendar" element={<Calendar />} />
-                <Route path="bookings" element={<Bookings />} />
-                <Route path="bookings/new" element={<NewBooking />} />
-                <Route path="bookings/:id" element={<BookingDetail />} />
-                <Route path="guests" element={<Guests />} />
-                <Route path="guests/:id" element={<GuestProfile />} />
-                <Route path="invoices" element={<Invoices />} />
-                <Route path="rates" element={<Rates />} />
-                <Route path="availability" element={<Availability />} />
-                <Route path="reports" element={<Reports />} />
-                <Route path="settings" element={<Settings />} />
+              <Route element={<ProtectedLayout />}>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard/calendar" element={<Calendar />} />
+                <Route path="/dashboard/bookings" element={<Bookings />} />
+                <Route path="/dashboard/bookings/new" element={<NewBooking />} />
+                <Route path="/dashboard/bookings/:id" element={<BookingDetail />} />
+                <Route path="/dashboard/guests" element={<Guests />} />
+                <Route path="/dashboard/guests/:id" element={<GuestProfile />} />
+                <Route path="/dashboard/invoices" element={<Invoices />} />
+                <Route path="/dashboard/rates" element={<Rates />} />
+                <Route path="/dashboard/availability" element={<Availability />} />
+                <Route path="/dashboard/reports" element={<Reports />} />
+                <Route path="/dashboard/settings" element={<Settings />} />
               </Route>
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
