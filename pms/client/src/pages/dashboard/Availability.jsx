@@ -10,8 +10,8 @@ export default function Availability() {
   const [form, setForm] = useState({ room_id: '', start_date: '', end_date: '', reason: 'blocked', notes: '' });
   const { addToast } = useToast();
 
-  const load = () => api.get('/api/availability/blocks').then(r => setBlocks(r.data));
-  useEffect(() => { load(); api.get('/api/rooms').then(r => setRooms(r.data)); }, []);
+  const load = () => api.get('/api/availability/blocks').then(r => setBlocks(r.data?.blocks || []));
+  useEffect(() => { load(); api.get('/api/rooms').then(r => setRooms(r.data?.rooms || [])); }, []);
 
   const save = async () => {
     try { await api.post('/api/availability/blocks', form); addToast('Block created'); setModal(false); load(); }
