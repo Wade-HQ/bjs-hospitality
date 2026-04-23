@@ -150,14 +150,12 @@ export default function Dashboard() {
           sub={`${occupancyPct}% occupied`}
           color="green"
         />
-        {commissionTotal > 0 && (
-          <StatCard
-            title="Commissions Due"
-            value={`${currency} ${fmt(commissionTotal)}`}
-            sub={`${commissions.length} record(s)`}
-            color="gold"
-          />
-        )}
+        <StatCard
+          title="Commissions Due"
+          value={commissionTotal > 0 ? `${currency} ${fmt(commissionTotal)}` : '—'}
+          sub={`${commissions.length} record(s)`}
+          color="gold"
+        />
       </div>
 
       {/* Revenue row */}
