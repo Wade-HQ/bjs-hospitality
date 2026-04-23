@@ -664,13 +664,14 @@ router.post('/:id/cancel', requireAuth, requireRole('owner','hotel_manager','fro
   );
 
   // Send cancellation email to guest (non-blocking)
-  const guestForCancel = db.prepare(`SELECT first_name, last_name, email FROM guests WHERE id = ?`).get(existing.guest_id);
-  if (guestForCancel?.email) {
+  const guestForCancel   = db.prepare(`SELECT first_name, last_name, email FROM guests WHERE id = ?`).get(existing.guest_id);
+  const propertyForEmail = db.prepare(`SELECT name, contact_email, contact_phone FROM properties WHERE id = ?`).get(PROPERTY_ID());
+  if (guestForCancel?.email && propertyForEmail) {
     sendBookingCancellation({
       ...existing,
       guest_email: guestForCancel.email,
       first_name:  guestForCancel.first_name,
-    }, property, reason || null).catch(() => {});
+    }, propertyForEmail, reason || null).catch(() => {});
   }
 
   const updated = getBookingById(db, req.params.id);
