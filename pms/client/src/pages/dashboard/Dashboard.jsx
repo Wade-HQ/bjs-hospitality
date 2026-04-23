@@ -207,12 +207,10 @@ export default function Dashboard() {
                       {b.guest_name}
                     </div>
                     <div className="text-xs text-gray-400">
-                      Room {b.room_number || b.room_name} &bull; {b.nights} night{b.nights !== 1 ? 's' : ''}
+                      {b.room_number ? `Room ${b.room_number}` : b.room_type_name} &bull; {b.nights} night{b.nights !== 1 ? 's' : ''}
                     </div>
-                    {Number(b.balance_due) > 0 && (
-                      <div className="text-xs text-red-500 font-medium mt-0.5">
-                        Balance: {currency} {fmt(b.balance_due)}
-                      </div>
+                    {b.payment_status === 'unpaid' && (
+                      <div className="text-xs text-red-500 font-medium mt-0.5">Payment outstanding</div>
                     )}
                   </div>
                   <StatusBadge status={b.status} />
