@@ -6,6 +6,7 @@ import { PropertyProvider } from './contexts/PropertyContext.jsx';
 import DashboardLayout from './components/DashboardLayout.jsx';
 
 import Login from './pages/Login.jsx';
+import ChangePassword from './pages/ChangePassword.jsx';
 import Dashboard from './pages/dashboard/Dashboard.jsx';
 import Calendar from './pages/dashboard/Calendar.jsx';
 import Bookings from './pages/dashboard/Bookings.jsx';
