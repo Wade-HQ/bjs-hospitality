@@ -22,7 +22,7 @@ export default function NewBooking() {
 
   useEffect(() => {
     if (!form.room_type_id) return;
-    api.get('/api/rooms', { params: { room_type_id: form.room_type_id } }).then(r => setRooms(r.data));
+    api.get('/api/rooms', { params: { room_type_id: form.room_type_id } }).then(r => setRooms(r.data?.rooms || []));
   }, [form.room_type_id]);
 
   const setField = (k, v) => setForm(p => ({ ...p, [k]: v }));
