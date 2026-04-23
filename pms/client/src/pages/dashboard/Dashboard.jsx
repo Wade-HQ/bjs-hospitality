@@ -266,33 +266,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Overdue Payments */}
-        {overduePayments.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-red-600">Overdue Payments</h2>
-              <span className="text-xs text-gray-400">{overduePayments.length} bookings</span>
-            </div>
-            <div className="divide-y divide-gray-50">
-              {overduePayments.slice(0, 8).map(b => (
-                <div
-                  key={b.id}
-                  className="flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate(`/dashboard/bookings/${b.id}`)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-primary truncate">{b.guest_name}</div>
-                    <div className="text-xs text-gray-400">Checked out: {b.check_out?.slice(0, 10)}</div>
-                  </div>
-                  <span className="text-sm font-semibold text-red-600 whitespace-nowrap">
-                    {currency} {fmt(b.balance_due)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Commissions */}
         {commissions.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
