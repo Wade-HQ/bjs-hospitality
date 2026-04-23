@@ -51,10 +51,10 @@ export default function DashboardLayout({ children }) {
 
   const fetchNotifications = async () => {
     try {
-      const res = await api.get('/api/notifications?read=false');
-      const data = res.data || [];
-      setNotifCount(data.length);
-      setNotifications(data.slice(0, 15));
+      const res = await api.get('/api/notifications?unread=true');
+      const notifications = res.data?.notifications || [];
+      setNotifCount(res.data?.unread_count ?? notifications.length);
+      setNotifications(notifications.slice(0, 15));
     } catch (_) {}
   };
 
