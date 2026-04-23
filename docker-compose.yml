@@ -1,0 +1,92 @@
+services:
+  ota:
+    build:
+      context: ./ota
+    restart: unless-stopped
+    environment:
+      PORT: "3100"
+      DATABASE_PATH: /opt/bjs-hospitality/database/hospitality.db
+      UPLOADS_PATH: /opt/bjs-hospitality/uploads
+      SESSION_SECRET: ${SESSION_SECRET}
+      APP_URL: ${OTA_URL:-https://ota.bluejungle.solutions}
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+    volumes:
+      - bjs-data:/opt/bjs-hospitality
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.ota.rule=Host(`ota.bluejungle.solutions`)
+      - traefik.http.routers.ota.entrypoints=https
+      - traefik.http.routers.ota.tls.certresolver=letsencrypt
+      - traefik.http.services.ota.loadbalancer.server.port=3100
+      - traefik.http.routers.ota-http.rule=Host(`ota.bluejungle.solutions`)
+      - traefik.http.routers.ota-http.entrypoints=http
+      - traefik.http.routers.ota-http.middlewares=redirect-to-https
+    networks:
+      - coolify
+
+  skyisland:
+    build:
+      context: ./pms
+    restart: unless-stopped
+    environment:
+      PORT: "3101"
+      PROPERTY_ID: "1"
+      DATABASE_PATH: /opt/bjs-hospitality/database/hospitality.db
+      UPLOADS_PATH: /opt/bjs-hospitality/uploads
+      SESSION_SECRET: ${SESSION_SECRET}
+      APP_URL: ${SKY_URL:-https://skyisland.bluejungle.solutions}
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+    volumes:
+      - bjs-data:/opt/bjs-hospitality
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.skyisland.rule=Host(`skyisland.bluejungle.solutions`)
+      - traefik.http.routers.skyisland.entrypoints=https
+      - traefik.http.routers.skyisland.tls.certresolver=letsencrypt
+      - traefik.http.services.skyisland.loadbalancer.server.port=3101
+      - traefik.http.routers.skyisland-http.rule=Host(`skyisland.bluejungle.solutions`)
+      - traefik.http.routers.skyisland-http.entrypoints=http
+      - traefik.http.routers.skyisland-http.middlewares=redirect-to-https
+    networks:
+      - coolify
+    depends_on:
+      - ota
+
+  membene:
+    build:
+      context: ./pms
+    restart: unless-stopped
+    environment:
+      PORT: "3102"
+      PROPERTY_ID: "2"
+      DATABASE_PATH: /opt/bjs-hospitality/database/hospitality.db
+      UPLOADS_PATH: /opt/bjs-hospitality/uploads
+      SESSION_SECRET: ${SESSION_SECRET}
+      APP_URL: ${MEM_URL:-https://membene.bluejungle.solutions}
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+    volumes:
+      - bjs-data:/opt/bjs-hospitality
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.membene.rule=Host(`membene.bluejungle.solutions`)
+      - traefik.http.routers.membene.entrypoints=https
+      - traefik.http.routers.membene.tls.certresolver=letsencrypt
+      - traefik.http.services.membene.loadbalancer.server.port=3102
+      - traefik.http.routers.membene-http.rule=Host(`membene.bluejungle.solutions`)
+      - traefik.http.routers.membene-http.entrypoints=http
+      - traefik.http.routers.membene-http.middlewares=redirect-to-https
+    networks:
+      - coolify
+    depends_on:
+      - ota
+
+volumes:
+  bjs-data:
+    name: bjs-hospitality-data
+
+networks:
+  coolify:
+    external: true
