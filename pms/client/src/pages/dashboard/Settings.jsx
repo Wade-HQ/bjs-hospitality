@@ -110,6 +110,7 @@ export default function Settings() {
       max_adults: roomForm.max_adults !== '' ? Number(roomForm.max_adults) : null,
       show_online: roomForm.show_online ? 1 : 0,
       wheelchair_accessible: roomForm.wheelchair_accessible ? 1 : 0,
+      bedrooms: Number(roomForm.bedrooms) || 1,
       description: roomForm.description || null,
       amenities_json: roomForm.amenities_json || '[]',
     };
