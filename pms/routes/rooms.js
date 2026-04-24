@@ -66,7 +66,8 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
   if (!room) return res.status(404).json({ error: 'Room not found' });
 
   const { status, notes, floor, room_number, name, room_type_id,
-          max_occupancy, max_adults, bed_config, bed_config_alt, show_online } = req.body;
+          max_occupancy, max_adults, bed_config, bed_config_alt, show_online,
+          description, amenities_json, wheelchair_accessible } = req.body;
 
   // Validate room_type_id belongs to this property if provided
   if (room_type_id != null) {
