@@ -104,6 +104,26 @@ app.use('/api/sync',           channelSyncRouter);
 app.use('/api/users',          usersRouter);
 app.use('/api/properties',     propertiesRouter);
 
+// ─── GET /api/health ─────────────────────────────────────────────────────────
+
+app.get('/api/health', (req, res) => {
+  try {
+    const db = getDb();
+    db.prepare('SELECT 1').get();
+    res.json({
+      status: 'ok',
+      app: 'impala-ota',
+      version: '1.0.0',
+      db: 'connected',
+      db_path: process.env.DATABASE_PATH || '/opt/bjs-hospitality/database/hospitality.db',
+      uptime_seconds: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (e) {
+    res.status(500).json({ status: 'error', db: 'failed', error: e.message });
+  }
+});
+
 // ---------------------------------------------------------------------------
 // SPA fallback — only for non-API routes
 // ---------------------------------------------------------------------------
