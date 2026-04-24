@@ -61,7 +61,7 @@ export default function App() {
         <ToastProvider>
           <Routes>
             {/* Public */}
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<RootRedirect />} />
             <Route path="/properties" element={<Properties />} />
             <Route path="/properties/:slug" element={<PropertyDetail />} />
             <Route path="/booking/confirm" element={<BookingConfirm />} />
