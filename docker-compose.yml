@@ -8,6 +8,7 @@ services:
       DATABASE_PATH: /opt/bjs-hospitality/database/hospitality.db
       UPLOADS_PATH: /opt/bjs-hospitality/uploads
       SESSION_SECRET: ${SESSION_SECRET}
+      SSO_SECRET: ${SSO_SECRET}
       APP_URL: ${OTA_URL:-https://ota.bluejungle.solutions}
       PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
       PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
@@ -41,6 +42,7 @@ services:
       DATABASE_PATH: /opt/bjs-hospitality/database/hospitality.db
       UPLOADS_PATH: /opt/bjs-hospitality/uploads
       SESSION_SECRET: ${SESSION_SECRET}
+      SSO_SECRET: ${SSO_SECRET}
       APP_URL: ${SKY_URL:-https://skyisland.bluejungle.solutions}
       PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
       PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
@@ -76,6 +78,7 @@ services:
       DATABASE_PATH: /opt/bjs-hospitality/database/hospitality.db
       UPLOADS_PATH: /opt/bjs-hospitality/uploads
       SESSION_SECRET: ${SESSION_SECRET}
+      SSO_SECRET: ${SSO_SECRET}
       APP_URL: ${MEM_URL:-https://membene.bluejungle.solutions}
       PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
       PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
