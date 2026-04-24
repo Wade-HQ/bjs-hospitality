@@ -11,10 +11,35 @@ const STATUS_COLORS = {
   blocked:     'bg-red-100 text-red-700',
 };
 
+const BED_OPTIONS = [
+  '1 King Bed',
+  '2 King Beds',
+  '2 Singles / Twin',
+  '3 Singles',
+  '4 Singles',
+  '1 Sofa Bed',
+  'Bunk Bed (sleeps 2)',
+  '2 Bunk Beds (sleeps 4)',
+  '3 Bunk Beds (sleeps 6)',
+  '1 King + 1 Single',
+  '1 King + Sofa Bed',
+  '1 King + Bunk Bed',
+  '2 Singles + Sofa Bed',
+  '2 Singles + Bunk Bed',
+];
+
+const AMENITIES = [
+  'WiFi', 'Air Conditioning', 'Ceiling Fan', 'Private Bathroom (En Suite)',
+  'Outdoor Shower', 'Private Deck / Balcony', 'Sea View', 'Bush View',
+  'Kitchenette', 'Mini-Fridge', 'Coffee & Tea', 'Safe',
+  'Mosquito Net', 'Braai / BBQ', 'Fire Pit', 'Pool Access',
+];
+
 const EMPTY_ROOM = {
   room_number: '', name: '', room_type_id: '', floor: '',
   status: 'available', max_occupancy: '', max_adults: '',
   bed_config: '', bed_config_alt: '', show_online: true, notes: '',
+  description: '', amenities_json: '[]', wheelchair_accessible: false,
 };
 
 const EMPTY_RT = { name: '' };
@@ -64,7 +89,16 @@ export default function Settings() {
       ...EMPTY_ROOM, ...r,
       room_type_id: String(r.room_type_id || ''),
       show_online: r.show_online !== 0,
+      wheelchair_accessible: r.wheelchair_accessible === 1 || r.wheelchair_accessible === true,
+      description: r.description || '',
+      amenities_json: r.amenities_json || '[]',
     });
+    setRoomModal(true);
+  };
+  const duplicateRoom = (r) => {
+    const { id, created_at, ...rest } = r;
+    const suggestedName = (rest.name || rest.room_number || '') + ' (Copy)';
+    setRoomForm({ ...EMPTY_ROOM, ...rest, name: suggestedName, room_type_id: String(rest.room_type_id || '') });
     setRoomModal(true);
   };
   const saveRoom = async () => {
@@ -75,6 +109,9 @@ export default function Settings() {
       max_occupancy: roomForm.max_occupancy !== '' ? Number(roomForm.max_occupancy) : null,
       max_adults: roomForm.max_adults !== '' ? Number(roomForm.max_adults) : null,
       show_online: roomForm.show_online ? 1 : 0,
+      wheelchair_accessible: roomForm.wheelchair_accessible ? 1 : 0,
+      description: roomForm.description || null,
+      amenities_json: roomForm.amenities_json || '[]',
     };
     try {
       if (roomForm.id) await api.put(`/api/rooms/${roomForm.id}`, payload);
@@ -118,6 +155,21 @@ export default function Settings() {
       addToast(e.response?.data?.error || 'Cannot delete — rooms still assigned', 'error');
       setRtDeleteConfirm(null);
     }
+  };
+
+  // ── Amenities helpers ─────────────────────────────────────────────────────
+  const selectedAmenities = (() => {
+    try { return JSON.parse(roomForm.amenities_json || '[]'); } catch { return []; }
+  })();
+
+  const toggleAmenity = (amenity) => {
+    const current = (() => {
+      try { return JSON.parse(roomForm.amenities_json || '[]'); } catch { return []; }
+    })();
+    const next = current.includes(amenity)
+      ? current.filter(a => a !== amenity)
+      : [...current, amenity];
+    setRoomForm(p => ({ ...p, amenities_json: JSON.stringify(next) }));
   };
 
   const propSections = [
@@ -220,13 +272,23 @@ export default function Settings() {
                               className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex flex-col gap-1.5">
                               {/* Room name + status */}
                               <div className="flex items-center justify-between gap-2">
-                                <span className="font-semibold text-gray-800 text-sm truncate">
-                                  {r.name || r.room_number}
-                                </span>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="font-semibold text-gray-800 text-sm truncate">
+                                    {r.name || r.room_number}
+                                  </span>
+                                  {r.wheelchair_accessible === 1 && (
+                                    <span className="text-xs flex-shrink-0" title="Wheelchair Accessible">♿</span>
+                                  )}
+                                </div>
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${STATUS_COLORS[r.status] || ''}`}>
                                   {r.status}
                                 </span>
                               </div>
+
+                              {/* Description snippet */}
+                              {r.description && (
+                                <p className="text-xs text-gray-400 truncate">{r.description}</p>
+                              )}
 
                               {/* Room details */}
                               <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
@@ -242,7 +304,7 @@ export default function Settings() {
                                 {r.floor && <span>📍 {r.floor}</span>}
                               </div>
 
-                              {/* Online badge */}
+                              {/* Online badge + actions */}
                               <div className="flex items-center justify-between mt-1">
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.show_online !== 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
                                   {r.show_online !== 0 ? '🌐 Online' : '🚫 Hidden'}
@@ -251,6 +313,10 @@ export default function Settings() {
                                   <button onClick={() => openEditRoom(r)}
                                     className="text-xs text-teal hover:underline font-medium">
                                     Edit
+                                  </button>
+                                  <button onClick={() => duplicateRoom(r)}
+                                    className="text-xs text-gray-400 hover:text-gray-600 hover:underline">
+                                    Duplicate
                                   </button>
                                   <button onClick={() => setDeleteConfirm(r)}
                                     className="text-xs text-red-400 hover:text-red-600 hover:underline">
@@ -390,32 +456,64 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Bed config */}
+          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Bed Configuration
-              <span className="text-gray-400 font-normal ml-1">e.g. 1 King bed, 1 sleeper sofa</span>
+              Room Description{' '}
+              <span className="text-xs text-gray-400 font-normal">(shown on booking website)</span>
             </label>
-            <input
-              value={roomForm.bed_config || ''}
-              onChange={e => setRoomForm(p => ({ ...p, bed_config: e.target.value }))}
-              placeholder="1 King bed"
+            <textarea
+              rows={3}
+              value={roomForm.description || ''}
+              onChange={e => setRoomForm(p => ({ ...p, description: e.target.value }))}
+              placeholder="Describe this room for guests..."
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
             />
+          </div>
+
+          {/* Bed config */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Bed Configuration</label>
+            <select
+              value={roomForm.bed_config || ''}
+              onChange={e => setRoomForm(p => ({ ...p, bed_config: e.target.value }))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">— Select bed config —</option>
+              {BED_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
           </div>
 
           {/* Alternative bed layout */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Alternative Bed Layout
-              <span className="text-gray-400 font-normal ml-1">optional secondary arrangement</span>
+              Alternative Bed Layout{' '}
+              <span className="text-gray-400 font-normal text-xs">optional secondary arrangement</span>
             </label>
-            <input
+            <select
               value={roomForm.bed_config_alt || ''}
               onChange={e => setRoomForm(p => ({ ...p, bed_config_alt: e.target.value }))}
-              placeholder="2 Single beds"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">— None (no alternate layout) —</option>
+              {BED_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+
+          {/* Amenities */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Amenities</label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {AMENITIES.map(amenity => (
+                <label key={amenity} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedAmenities.includes(amenity)}
+                    onChange={() => toggleAmenity(amenity)}
+                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span className="text-sm text-gray-700">{amenity}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Floor / Area */}
@@ -440,6 +538,20 @@ export default function Settings() {
               onClick={() => setRoomForm(p => ({ ...p, show_online: !p.show_online }))}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${roomForm.show_online ? 'bg-emerald-500' : 'bg-gray-300'}`}>
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${roomForm.show_online ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+
+          {/* Wheelchair accessible toggle */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <div>
+              <p className="text-sm font-medium text-gray-700">♿ Wheelchair Accessible</p>
+              <p className="text-xs text-gray-400 mt-0.5">Mark this room as wheelchair-friendly on the website</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRoomForm(p => ({ ...p, wheelchair_accessible: !p.wheelchair_accessible }))}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${roomForm.wheelchair_accessible ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${roomForm.wheelchair_accessible ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
 
