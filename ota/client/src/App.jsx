@@ -30,18 +30,28 @@ import Settings from './pages/dashboard/Settings.jsx';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-primary border-t-gold rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-gray-400 text-sm">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <AuthSpinner />;
   if (!user) return <Navigate to="/login" replace />;
   return children;
+}
+
+// When a logged-in user hits the public root, send them to the dashboard
+function RootRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) return <AuthSpinner />;
+  if (user) return <Navigate to="/dashboard" replace />;
+  return <Home />;
+}
+
+function AuthSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="text-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-gold rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-gray-400 text-sm">Loading...</p>
+      </div>
+    </div>
+  );
 }
 
 export default function App() {
