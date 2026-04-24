@@ -91,7 +91,8 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
       show_online           = ?,
       description           = ?,
       amenities_json        = ?,
-      wheelchair_accessible = ?
+      wheelchair_accessible = ?,
+      bedrooms              = ?
     WHERE id = ? AND property_id = ?
   `).run(
     status || null, notes || null, floor || null, room_number || null,
@@ -105,6 +106,7 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
     description ?? null,
     amenities_json ?? null,
     wheelchair_accessible != null ? (wheelchair_accessible ? 1 : 0) : null,
+    bedrooms != null ? Number(bedrooms) : null,
     req.params.id, PROPERTY_ID()
   );
 
