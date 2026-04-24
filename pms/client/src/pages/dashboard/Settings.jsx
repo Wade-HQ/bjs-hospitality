@@ -4,6 +4,21 @@ import Modal from '../../components/Modal.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import { useProperty } from '../../contexts/PropertyContext.jsx';
 
+const STATUS_COLORS = {
+  available:   'bg-emerald-100 text-emerald-700',
+  occupied:    'bg-blue-100 text-blue-700',
+  maintenance: 'bg-amber-100 text-amber-700',
+  blocked:     'bg-red-100 text-red-700',
+};
+
+const EMPTY_ROOM = {
+  room_number: '', name: '', room_type_id: '', floor: '',
+  status: 'available', max_occupancy: '', max_adults: '',
+  bed_config: '', bed_config_alt: '', show_online: true, notes: '',
+};
+
+const EMPTY_RT = { name: '', description: '', max_occupancy: 2, base_rate: 0 };
+
 export default function Settings() {
   const { property, reload: reloadProperty } = useProperty();
   const [form, setForm] = useState({});
@@ -11,10 +26,11 @@ export default function Settings() {
   const [rooms, setRooms] = useState([]);
   const [roomTypes, setRoomTypes] = useState([]);
   const [roomModal, setRoomModal] = useState(false);
-  const [roomForm, setRoomForm] = useState({});
-  const [deleteConfirm, setDeleteConfirm] = useState(null); // room to delete
+  const [roomForm, setRoomForm] = useState(EMPTY_ROOM);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [rtModal, setRtModal] = useState(false);
-  const [rtForm, setRtForm] = useState({});
+  const [rtForm, setRtForm] = useState(EMPTY_RT);
+  const [rtDeleteConfirm, setRtDeleteConfirm] = useState(null);
   const [activeSection, setActiveSection] = useState('rooms');
   const { addToast } = useToast();
 
@@ -40,17 +56,29 @@ export default function Settings() {
 
   // ── Room CRUD ─────────────────────────────────────────────────────────────
   const openAddRoom = (roomTypeId = '') => {
-    setRoomForm({ room_number: '', room_type_id: String(roomTypeId), floor: '', status: 'available', notes: '' });
+    setRoomForm({ ...EMPTY_ROOM, room_type_id: String(roomTypeId) });
     setRoomModal(true);
   };
   const openEditRoom = (r) => {
-    setRoomForm({ ...r, room_type_id: String(r.room_type_id || '') });
+    setRoomForm({
+      ...EMPTY_ROOM, ...r,
+      room_type_id: String(r.room_type_id || ''),
+      show_online: r.show_online !== 0,
+    });
     setRoomModal(true);
   };
   const saveRoom = async () => {
+    const payload = {
+      ...roomForm,
+      room_number: roomForm.name || roomForm.room_number,
+      room_type_id: roomForm.room_type_id || null,
+      max_occupancy: roomForm.max_occupancy !== '' ? Number(roomForm.max_occupancy) : null,
+      max_adults: roomForm.max_adults !== '' ? Number(roomForm.max_adults) : null,
+      show_online: roomForm.show_online ? 1 : 0,
+    };
     try {
-      if (roomForm.id) await api.put(`/api/rooms/${roomForm.id}`, roomForm);
-      else await api.post('/api/rooms', roomForm);
+      if (roomForm.id) await api.put(`/api/rooms/${roomForm.id}`, payload);
+      else await api.post('/api/rooms', payload);
       addToast(roomForm.id ? 'Room updated' : 'Room added');
       setRoomModal(false);
       load();
@@ -62,14 +90,14 @@ export default function Settings() {
       addToast('Room deleted');
       setDeleteConfirm(null);
       load();
-    } catch (e) { addToast(e.response?.data?.error || 'Cannot delete room with active bookings', 'error'); setDeleteConfirm(null); }
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Cannot delete room with active bookings', 'error');
+      setDeleteConfirm(null);
+    }
   };
 
   // ── Room Type CRUD ────────────────────────────────────────────────────────
-  const openAddRoomType = () => {
-    setRtForm({ name: '', description: '', max_occupancy: 2, base_rate: 0 });
-    setRtModal(true);
-  };
+  const openAddRoomType = () => { setRtForm(EMPTY_RT); setRtModal(true); };
   const openEditRoomType = (rt) => { setRtForm(rt); setRtModal(true); };
   const saveRoomType = async () => {
     try {
@@ -79,6 +107,17 @@ export default function Settings() {
       setRtModal(false);
       load();
     } catch (e) { addToast(e.response?.data?.error || 'Error', 'error'); }
+  };
+  const deleteRoomType = async (rt) => {
+    try {
+      await api.delete(`/api/room-types/${rt.id}`);
+      addToast('Room type deleted');
+      setRtDeleteConfirm(null);
+      load();
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Cannot delete — rooms still assigned', 'error');
+      setRtDeleteConfirm(null);
+    }
   };
 
   const propSections = [
@@ -99,13 +138,6 @@ export default function Settings() {
     ]},
   ];
 
-  const STATUS_COLORS = {
-    available: 'bg-emerald-100 text-emerald-700',
-    occupied: 'bg-blue-100 text-blue-700',
-    maintenance: 'bg-amber-100 text-amber-700',
-    blocked: 'bg-red-100 text-red-700',
-  };
-
   if (!property) return <div className="p-12 text-center text-gray-400">Loading…</div>;
 
   return (
@@ -114,13 +146,10 @@ export default function Settings() {
       <p className="text-gray-400 text-sm mb-6">{property.name}</p>
 
       {/* Section tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 w-fit flex-wrap">
         {[['rooms', '🛏 Rooms & Types'], ['property', '🏨 Property'], ['finance', '💰 Finance'], ['email', '📧 Email']].map(([k, l]) => (
-          <button
-            key={k}
-            onClick={() => setActiveSection(k)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeSection === k ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
+          <button key={k} onClick={() => setActiveSection(k)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeSection === k ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             {l}
           </button>
         ))}
@@ -130,34 +159,39 @@ export default function Settings() {
       {activeSection === 'rooms' && (
         <div className="space-y-6">
 
-          {/* Room Types */}
+          {/* Room Types header */}
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div>
-                <h2 className="font-semibold text-gray-800">Room Types</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Categories of accommodation — add individual rooms under each type</p>
+                <h2 className="font-semibold text-gray-800">Room Types &amp; Rooms</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Room types are categories (e.g. Chalet, Tent). Individual rooms belong to a type.
+                </p>
               </div>
-              <button onClick={openAddRoomType} className="text-sm bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary/90">
-                + Add Type
+              <button onClick={openAddRoomType}
+                className="text-sm bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary/90">
+                + Add Room Type
               </button>
             </div>
 
             {roomTypes.length === 0 ? (
-              <div className="px-6 py-10 text-center text-gray-400 text-sm">No room types yet. Add one above.</div>
+              <div className="px-6 py-10 text-center text-gray-400 text-sm">
+                No room types yet. Add one to get started.
+              </div>
             ) : (
               <div className="divide-y divide-gray-100">
                 {roomTypes.map(rt => {
                   const rtRooms = rooms.filter(r => r.room_type_id === rt.id);
                   return (
-                    <div key={rt.id} className="px-6 py-4">
-                      <div className="flex items-start justify-between gap-4">
+                    <div key={rt.id} className="px-6 py-5">
+                      {/* Room type header row */}
+                      <div className="flex items-start justify-between gap-4 mb-3">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3">
-                            <span className="font-semibold text-gray-800">{rt.name}</span>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="font-semibold text-gray-800 text-base">{rt.name}</span>
                             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
                               {rtRooms.length} room{rtRooms.length !== 1 ? 's' : ''}
                             </span>
-                            <span className="text-xs text-gray-400">Max {rt.max_occupancy} guests</span>
                             {rt.base_rate > 0 && (
                               <span className="text-xs text-emerald-600 font-medium">
                                 {rt.currency || 'ZAR'} {Number(rt.base_rate).toLocaleString()}/night
@@ -165,52 +199,77 @@ export default function Settings() {
                             )}
                           </div>
                           {rt.description && (
-                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">{rt.description}</p>
-                          )}
-
-                          {/* Rooms under this type */}
-                          {rtRooms.length > 0 && (
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {rtRooms.map(r => (
-                                <div key={r.id} className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
-                                  <span className="text-sm font-medium text-gray-700">{r.room_number}</span>
-                                  {r.floor && <span className="text-xs text-gray-400">· Floor {r.floor}</span>}
-                                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[r.status] || ''}`}>
-                                    {r.status}
-                                  </span>
-                                  <button
-                                    onClick={() => openEditRoom(r)}
-                                    className="text-xs text-teal hover:underline ml-1"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={() => setDeleteConfirm(r)}
-                                    className="text-xs text-red-400 hover:text-red-600 hover:underline"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
+                            <p className="text-xs text-gray-500 mt-1">{rt.description}</p>
                           )}
                         </div>
-
                         <div className="flex gap-2 flex-shrink-0">
-                          <button
-                            onClick={() => openAddRoom(rt.id)}
-                            className="text-xs border border-gold text-gold px-3 py-1.5 rounded-lg hover:bg-gold hover:text-white transition-colors"
-                          >
+                          <button onClick={() => openAddRoom(rt.id)}
+                            className="text-xs border border-gold text-gold px-3 py-1.5 rounded-lg hover:bg-gold hover:text-white transition-colors">
                             + Add Room
                           </button>
-                          <button
-                            onClick={() => openEditRoomType(rt)}
-                            className="text-xs border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-50"
-                          >
+                          <button onClick={() => openEditRoomType(rt)}
+                            className="text-xs border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-50">
                             Edit Type
+                          </button>
+                          <button onClick={() => setRtDeleteConfirm(rt)}
+                            className="text-xs border border-red-200 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-50">
+                            Delete
                           </button>
                         </div>
                       </div>
+
+                      {/* Rooms grid */}
+                      {rtRooms.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic pl-1">No rooms yet — click "+ Add Room" to add one.</p>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {rtRooms.map(r => (
+                            <div key={r.id}
+                              className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex flex-col gap-1.5">
+                              {/* Room name + status */}
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-semibold text-gray-800 text-sm truncate">
+                                  {r.name || r.room_number}
+                                </span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${STATUS_COLORS[r.status] || ''}`}>
+                                  {r.status}
+                                </span>
+                              </div>
+
+                              {/* Room details */}
+                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                                {(r.max_occupancy || r.max_adults) && (
+                                  <span>
+                                    👥 {r.max_occupancy ? `${r.max_occupancy} guests` : ''}
+                                    {r.max_occupancy && r.max_adults ? ' · ' : ''}
+                                    {r.max_adults ? `${r.max_adults} adults` : ''}
+                                  </span>
+                                )}
+                                {r.bed_config && <span>🛏 {r.bed_config}</span>}
+                                {r.bed_config_alt && <span className="text-gray-400">Alt: {r.bed_config_alt}</span>}
+                                {r.floor && <span>📍 {r.floor}</span>}
+                              </div>
+
+                              {/* Online badge */}
+                              <div className="flex items-center justify-between mt-1">
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.show_online !== 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
+                                  {r.show_online !== 0 ? '🌐 Online' : '🚫 Hidden'}
+                                </span>
+                                <div className="flex gap-2">
+                                  <button onClick={() => openEditRoom(r)}
+                                    className="text-xs text-teal hover:underline font-medium">
+                                    Edit
+                                  </button>
+                                  <button onClick={() => setDeleteConfirm(r)}
+                                    className="text-xs text-red-400 hover:text-red-600 hover:underline">
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -228,7 +287,7 @@ export default function Settings() {
               <div className="px-6 py-4 flex flex-wrap gap-2">
                 {rooms.filter(r => !r.room_type_id).map(r => (
                   <div key={r.id} className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-                    <span className="text-sm font-medium">{r.room_number}</span>
+                    <span className="text-sm font-medium">{r.name || r.room_number}</span>
                     <button onClick={() => openEditRoom(r)} className="text-xs text-teal hover:underline">Edit</button>
                     <button onClick={() => setDeleteConfirm(r)} className="text-xs text-red-400 hover:underline">Delete</button>
                   </div>
@@ -251,25 +310,20 @@ export default function Settings() {
                 <div key={f.k} className={f.k === 'payment_instructions' ? 'col-span-2' : ''}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{f.l}</label>
                   {f.k === 'payment_instructions' ? (
-                    <textarea
-                      rows={3}
-                      value={form[f.k] || ''}
+                    <textarea rows={3} value={form[f.k] || ''}
                       onChange={e => setForm(p => ({ ...p, [f.k]: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    />
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
                   ) : (
-                    <input
-                      type={f.t || 'text'}
-                      value={form[f.k] || ''}
+                    <input type={f.t || 'text'} value={form[f.k] || ''}
                       onChange={e => setForm(p => ({ ...p, [f.k]: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    />
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
                   )}
                 </div>
               ))}
             </div>
             <div className="mt-5 pt-4 border-t border-gray-100">
-              <button onClick={save} disabled={saving} className="bg-gold text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 disabled:opacity-50 text-sm">
+              <button onClick={save} disabled={saving}
+                className="bg-gold text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 disabled:opacity-50 text-sm">
                 {saving ? 'Saving…' : 'Save Settings'}
               </button>
             </div>
@@ -278,59 +332,129 @@ export default function Settings() {
       })()}
 
       {/* ── ADD/EDIT ROOM MODAL ── */}
-      <Modal open={roomModal} onClose={() => setRoomModal(false)} title={roomForm.id ? 'Edit Room' : 'Add Room'}>
+      <Modal open={roomModal} onClose={() => setRoomModal(false)}
+        title={roomForm.id ? 'Edit Room' : 'Add Room'}>
         <div className="space-y-4">
+
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Room Name <span className="text-red-400">*</span>
+              <span className="text-gray-400 font-normal ml-1">e.g. Meadow Chalet 1</span>
+            </label>
+            <input
+              value={roomForm.name || ''}
+              onChange={e => setRoomForm(p => ({ ...p, name: e.target.value }))}
+              placeholder="Meadow Chalet 1"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+
+          {/* Room Type + Status */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Room Number / Name <span className="text-red-400">*</span></label>
-              <input
-                value={roomForm.room_number || ''}
-                onChange={e => setRoomForm(p => ({ ...p, room_number: e.target.value }))}
-                placeholder="e.g. C1, T3, Tent 4"
+              <label className="block text-sm font-medium text-gray-700 mb-1">Room Type</label>
+              <select
+                value={roomForm.room_type_id || ''}
+                onChange={e => setRoomForm(p => ({ ...p, room_type_id: e.target.value }))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <option value="">— No type —</option>
+                {roomTypes.map(rt => <option key={rt.id} value={rt.id}>{rt.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                value={roomForm.status || 'available'}
+                onChange={e => setRoomForm(p => ({ ...p, status: e.target.value }))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <option value="available">Available</option>
+                <option value="occupied">Occupied</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="blocked">Blocked</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Max occupancy + Max adults */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Max Occupancy (total guests)</label>
+              <input type="number" min={1} max={30}
+                value={roomForm.max_occupancy || ''}
+                onChange={e => setRoomForm(p => ({ ...p, max_occupancy: e.target.value }))}
+                placeholder="e.g. 4"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Floor / Area</label>
-              <input
-                value={roomForm.floor || ''}
-                onChange={e => setRoomForm(p => ({ ...p, floor: e.target.value }))}
-                placeholder="e.g. Ground, Ridge, Dune"
+              <label className="block text-sm font-medium text-gray-700 mb-1">Max Adults</label>
+              <input type="number" min={1} max={20}
+                value={roomForm.max_adults || ''}
+                onChange={e => setRoomForm(p => ({ ...p, max_adults: e.target.value }))}
+                placeholder="e.g. 2"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               />
             </div>
           </div>
 
+          {/* Bed config */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Room Type</label>
-            <select
-              value={roomForm.room_type_id || ''}
-              onChange={e => setRoomForm(p => ({ ...p, room_type_id: e.target.value }))}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Bed Configuration
+              <span className="text-gray-400 font-normal ml-1">e.g. 1 King bed, 1 sleeper sofa</span>
+            </label>
+            <input
+              value={roomForm.bed_config || ''}
+              onChange={e => setRoomForm(p => ({ ...p, bed_config: e.target.value }))}
+              placeholder="1 King bed"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            >
-              <option value="">— No type assigned —</option>
-              {roomTypes.map(rt => <option key={rt.id} value={rt.id}>{rt.name}</option>)}
-            </select>
+            />
           </div>
 
+          {/* Alternative bed layout */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              value={roomForm.status || 'available'}
-              onChange={e => setRoomForm(p => ({ ...p, status: e.target.value }))}
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Alternative Bed Layout
+              <span className="text-gray-400 font-normal ml-1">optional secondary arrangement</span>
+            </label>
+            <input
+              value={roomForm.bed_config_alt || ''}
+              onChange={e => setRoomForm(p => ({ ...p, bed_config_alt: e.target.value }))}
+              placeholder="2 Single beds"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            >
-              <option value="available">Available</option>
-              <option value="occupied">Occupied</option>
-              <option value="maintenance">Maintenance</option>
-              <option value="blocked">Blocked</option>
-            </select>
+            />
           </div>
 
+          {/* Floor / Area */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-            <textarea
-              rows={2}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Floor / Area</label>
+            <input
+              value={roomForm.floor || ''}
+              onChange={e => setRoomForm(p => ({ ...p, floor: e.target.value }))}
+              placeholder="e.g. Ground, Ridge, Beachside"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+
+          {/* Show online toggle */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Show on Website</p>
+              <p className="text-xs text-gray-400 mt-0.5">When off, this room won't appear on the public booking site</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRoomForm(p => ({ ...p, show_online: !p.show_online }))}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${roomForm.show_online ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${roomForm.show_online ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Internal Notes</label>
+            <textarea rows={2}
               value={roomForm.notes || ''}
               onChange={e => setRoomForm(p => ({ ...p, notes: e.target.value }))}
               placeholder="Any internal notes about this room…"
@@ -340,36 +464,42 @@ export default function Settings() {
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
-          <button onClick={() => setRoomModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-          <button onClick={saveRoom} className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:opacity-90">Save Room</button>
+          <button onClick={() => setRoomModal(false)}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+          <button onClick={saveRoom}
+            className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:opacity-90">Save Room</button>
         </div>
       </Modal>
 
       {/* ── ADD/EDIT ROOM TYPE MODAL ── */}
-      <Modal open={rtModal} onClose={() => setRtModal(false)} title={rtForm.id ? 'Edit Room Type' : 'Add Room Type'}>
+      <Modal open={rtModal} onClose={() => setRtModal(false)}
+        title={rtForm.id ? 'Edit Room Type' : 'Add Room Type'}>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-400">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Type Name <span className="text-red-400">*</span>
+              <span className="text-gray-400 font-normal ml-1">e.g. Chalet, Tent, Campsite</span>
+            </label>
             <input
               value={rtForm.name || ''}
               onChange={e => setRtForm(p => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Meadow Chalet"
+              placeholder="Meadow Chalet"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              rows={3}
+            <textarea rows={2}
               value={rtForm.description || ''}
               onChange={e => setRtForm(p => ({ ...p, description: e.target.value }))}
+              placeholder="Short description shown on the booking site…"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Max Occupancy</label>
-              <input type="number" min={1} max={20}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Default Max Occupancy</label>
+              <input type="number" min={1} max={30}
                 value={rtForm.max_occupancy || 2}
                 onChange={e => setRtForm(p => ({ ...p, max_occupancy: e.target.value }))}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
@@ -386,22 +516,44 @@ export default function Settings() {
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
-          <button onClick={() => setRtModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-          <button onClick={saveRoomType} className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:opacity-90">Save Type</button>
+          <button onClick={() => setRtModal(false)}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+          <button onClick={saveRoomType}
+            className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:opacity-90">Save Type</button>
         </div>
       </Modal>
 
-      {/* ── DELETE CONFIRM ── */}
+      {/* ── DELETE ROOM CONFIRM ── */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
             <h3 className="font-bold text-gray-800 text-lg mb-2">Delete Room?</h3>
             <p className="text-gray-500 text-sm mb-6">
-              Are you sure you want to delete <strong>{deleteConfirm.room_number}</strong>? This cannot be undone.
+              Are you sure you want to delete <strong>{deleteConfirm.name || deleteConfirm.room_number}</strong>? This cannot be undone.
             </p>
             <div className="flex gap-3 justify-end">
-              <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-              <button onClick={() => deleteRoom(deleteConfirm)} className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600">Delete</button>
+              <button onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+              <button onClick={() => deleteRoom(deleteConfirm)}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DELETE ROOM TYPE CONFIRM ── */}
+      {rtDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h3 className="font-bold text-gray-800 text-lg mb-2">Delete Room Type?</h3>
+            <p className="text-gray-500 text-sm mb-6">
+              Delete <strong>{rtDeleteConfirm.name}</strong>? Rooms assigned to this type will become unassigned.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setRtDeleteConfirm(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+              <button onClick={() => deleteRoomType(rtDeleteConfirm)}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600">Delete</button>
             </div>
           </div>
         </div>
