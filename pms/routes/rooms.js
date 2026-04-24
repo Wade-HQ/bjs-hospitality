@@ -115,9 +115,11 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
 // POST /api/rooms (create new room)
 router.post('/', requireAuth, requireRole('owner','hotel_manager'), (req, res) => {
   const db = getDb();
-  const { room_number, room_type_id, floor, status = 'available', notes } = req.body;
+  const { room_number, name, room_type_id, floor, status = 'available', notes,
+          max_occupancy, max_adults, bed_config, bed_config_alt, show_online = 1 } = req.body;
 
-  if (!room_number) return res.status(400).json({ error: 'room_number is required' });
+  const displayName = name || room_number;
+  if (!displayName) return res.status(400).json({ error: 'room name is required' });
 
   // Verify room_type belongs to this property
   if (room_type_id) {
@@ -127,12 +129,20 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager'), (req, res) =
   }
 
   const result = db.prepare(`
-    INSERT INTO rooms (property_id, room_number, room_type_id, floor, status, notes)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(PROPERTY_ID(), room_number, room_type_id || null, floor || null, status, notes || null);
+    INSERT INTO rooms
+      (property_id, room_number, name, room_type_id, floor, status, notes,
+       max_occupancy, max_adults, bed_config, bed_config_alt, show_online)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    PROPERTY_ID(), displayName, name || null, room_type_id || null, floor || null, status, notes || null,
+    max_occupancy != null ? Number(max_occupancy) : null,
+    max_adults != null ? Number(max_adults) : null,
+    bed_config || null, bed_config_alt || null, show_online ? 1 : 0
+  );
 
   const room = db.prepare(`
-    SELECT r.*, rt.name as room_type_name, rt.base_rate, rt.max_occupancy
+    SELECT r.*, rt.name as room_type_name, rt.base_rate,
+           COALESCE(r.max_occupancy, rt.max_occupancy) as effective_max_occupancy
     FROM rooms r
     LEFT JOIN room_types rt ON rt.id = r.room_type_id
     WHERE r.id = ?
