@@ -39,7 +39,7 @@ const EMPTY_ROOM = {
   room_number: '', name: '', room_type_id: '', floor: '',
   status: 'available', max_occupancy: '', max_adults: '',
   bed_config: '', bed_config_alt: '', show_online: true, notes: '',
-  description: '', amenities_json: '[]', wheelchair_accessible: false,
+  description: '', amenities_json: '[]', wheelchair_accessible: false, bedrooms: 1,
 };
 
 const EMPTY_RT = { name: '' };
