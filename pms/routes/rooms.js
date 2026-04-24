@@ -65,19 +65,45 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
 
   if (!room) return res.status(404).json({ error: 'Room not found' });
 
-  const { status, notes, floor, room_number } = req.body;
+  const { status, notes, floor, room_number, name, room_type_id,
+          max_occupancy, max_adults, bed_config, bed_config_alt, show_online } = req.body;
+
+  // Validate room_type_id belongs to this property if provided
+  if (room_type_id != null) {
+    const rt = db.prepare('SELECT id FROM room_types WHERE id = ? AND property_id = ?')
+      .get(room_type_id, PROPERTY_ID());
+    if (!rt) return res.status(400).json({ error: 'Invalid room_type_id for this property' });
+  }
 
   db.prepare(`
     UPDATE rooms SET
-      status = COALESCE(?, status),
-      notes = COALESCE(?, notes),
-      floor = COALESCE(?, floor),
-      room_number = COALESCE(?, room_number)
+      status         = COALESCE(?, status),
+      notes          = COALESCE(?, notes),
+      floor          = COALESCE(?, floor),
+      room_number    = COALESCE(?, room_number),
+      name           = ?,
+      room_type_id   = COALESCE(?, room_type_id),
+      max_occupancy  = ?,
+      max_adults     = ?,
+      bed_config     = ?,
+      bed_config_alt = ?,
+      show_online    = ?
     WHERE id = ? AND property_id = ?
-  `).run(status || null, notes || null, floor || null, room_number || null, req.params.id, PROPERTY_ID());
+  `).run(
+    status || null, notes || null, floor || null, room_number || null,
+    name ?? null,
+    room_type_id != null ? Number(room_type_id) : null,
+    max_occupancy != null ? Number(max_occupancy) : null,
+    max_adults != null ? Number(max_adults) : null,
+    bed_config ?? null,
+    bed_config_alt ?? null,
+    show_online != null ? (show_online ? 1 : 0) : null,
+    req.params.id, PROPERTY_ID()
+  );
 
   const updated = db.prepare(`
-    SELECT r.*, rt.name as room_type_name, rt.base_rate, rt.max_occupancy
+    SELECT r.*, rt.name as room_type_name, rt.base_rate,
+           COALESCE(r.max_occupancy, rt.max_occupancy) as effective_max_occupancy
     FROM rooms r
     LEFT JOIN room_types rt ON rt.id = r.room_type_id
     WHERE r.id = ?
