@@ -181,6 +181,10 @@ router.get('/sso', (req, res) => {
   return res.json({
     user: { id: user.id, name: user.name, email: user.email, role: user.role, force_password_change: false }
   });
+  } catch (ssoErr) {
+    console.error('[SSO] Error after JWT verify:', ssoErr.message, ssoErr.stack);
+    return res.status(500).json({ error: 'SSO session creation failed', detail: ssoErr.message });
+  }
 });
 
 module.exports = router;
