@@ -466,52 +466,25 @@ export default function Settings() {
       {/* ── ADD/EDIT ROOM TYPE MODAL ── */}
       <Modal open={rtModal} onClose={() => setRtModal(false)}
         title={rtForm.id ? 'Edit Room Type' : 'Add Room Type'}>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Type Name <span className="text-red-400">*</span>
-              <span className="text-gray-400 font-normal ml-1">e.g. Chalet, Tent, Campsite</span>
-            </label>
-            <input
-              value={rtForm.name || ''}
-              onChange={e => setRtForm(p => ({ ...p, name: e.target.value }))}
-              placeholder="Meadow Chalet"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea rows={2}
-              value={rtForm.description || ''}
-              onChange={e => setRtForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="Short description shown on the booking site…"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Default Max Occupancy</label>
-              <input type="number" min={1} max={30}
-                value={rtForm.max_occupancy || 2}
-                onChange={e => setRtForm(p => ({ ...p, max_occupancy: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Base Rate / Night</label>
-              <input type="number" min={0}
-                value={rtForm.base_rate || 0}
-                onChange={e => setRtForm(p => ({ ...p, base_rate: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Type Name <span className="text-red-400">*</span>
+            <span className="text-gray-400 font-normal ml-1">e.g. Chalet, Tent, Campsite</span>
+          </label>
+          <input
+            autoFocus
+            value={rtForm.name || ''}
+            onChange={e => setRtForm(p => ({ ...p, name: e.target.value }))}
+            onKeyDown={e => e.key === 'Enter' && rtForm.name?.trim() && saveRoomType()}
+            placeholder="e.g. Chalet"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          />
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <button onClick={() => setRtModal(false)}
             className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-          <button onClick={saveRoomType}
-            className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:opacity-90">Save Type</button>
+          <button onClick={saveRoomType} disabled={!rtForm.name?.trim()}
+            className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-40">Save Type</button>
         </div>
       </Modal>
 
