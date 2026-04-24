@@ -279,11 +279,17 @@ async function runMigrations(db) {
   // Seed properties if empty
   const propCount = db.prepare('SELECT COUNT(*) as c FROM properties').get();
   if (propCount.c === 0) {
-    db.prepare(`INSERT INTO properties (id,name,slug,type,country,currency,timezone,commission_rate_percent,domain,contact_email,invoice_prefix,tax_label,tax_rate)
-      VALUES (1,'Sky Island Resort','sky-island','hotel','ZA','ZAR','Africa/Johannesburg',15,'skyisland.bluejungle.solutions','info@skyisland.co.za','SKY','VAT',15)`).run();
+    db.prepare(`INSERT INTO properties (id,name,slug,type,country,currency,timezone,commission_rate_percent,domain,contact_email,contact_phone,invoice_prefix,tax_label,tax_rate)
+      VALUES (1,'Sky Island Resort & Safari','sky-island','lodge','MZ','ZAR','Africa/Johannesburg',15,'skyisland.bluejungle.solutions','office@skyislandresort.com','+258850362730','SKY','VAT',15)`).run();
     db.prepare(`INSERT INTO properties (id,name,slug,type,country,currency,timezone,commission_rate_percent,domain,contact_email,invoice_prefix,tax_label,tax_rate)
       VALUES (2,'Ponta Membene Lodge','ponta-membene','lodge','MZ','MZN','Africa/Maputo',15,'membene.bluejungle.solutions','info@pontamembene.co.mz','PMB','IVA',17)`).run();
     console.log('Seeded 2 properties');
+  } else {
+    // Keep property details up to date
+    db.prepare(`UPDATE properties SET
+      name='Sky Island Resort & Safari', type='lodge', country='MZ',
+      contact_email='office@skyislandresort.com', contact_phone='+258850362730'
+      WHERE id=1 AND name='Sky Island Resort'`).run();
   }
 
   // Seed admin user if empty
@@ -294,6 +300,67 @@ async function runMigrations(db) {
       VALUES ('Admin','admin@bluejungle.solutions',?,?,'[1,2]',1)`)
       .run(hash, 'owner');
     console.log('Seeded admin user: admin@bluejungle.solutions / ChangeMeNow123!');
+  }
+
+  // ── Sky Island room types (idempotent by name) ─────────────────────────────
+  const WIX = 'https://static.wixstatic.com/media';
+  const SKY_ROOM_TYPES = [
+    {
+      name: 'Meadow Chalet',
+      description: 'Self-catering chalets nestled in unspoiled nature with sweeping views of the open grassy fields. Built with natural materials, each chalet offers a full kitchenette and private patio — the perfect base for exploring the ridge and coastline.',
+      max_occupancy: 3,
+      base_rate: 3127,
+      amenities: ['Kitchenette (stove, fridge, microwave, kettle)', 'King bed + sleeper couch', 'En-suite bathroom', 'Outside hot & cold shower', 'Smart TV', 'Overhead fan', 'Private patio', 'Braai (BBQ) facilities', 'Free Wi-Fi', 'Room service', 'Breakfast available'],
+      images: [
+        `${WIX}/57b862_6c4937616344464a897e0d05174bd386~mv2.jpg`,
+      ],
+    },
+    {
+      name: 'Food Forest Safari Tent',
+      description: 'Large luxury safari tents overlooking the resort\'s organic food forest and garden — a true glamping experience. Soft white linens, private outdoor shower, and the sounds of nature surround you.',
+      max_occupancy: 3,
+      base_rate: 1307,
+      amenities: ['King bed or 2 single beds', 'Private outdoor toilet & shower', 'Outside hot water wash area', 'Tea/coffee station', 'Mini fridge', 'Electricity & power points', 'Overhead fan', 'Braai facilities', 'Ample storage', 'Free Wi-Fi', 'Room service', 'Breakfast available'],
+      images: [
+        `${WIX}/57b862_e2d52c40c733456baeaccf87ddfd2352~mv2.jpg`,
+      ],
+    },
+    {
+      name: 'Super Deluxe Camp',
+      description: 'Premium group camping in the dune forest beneath tall shade trees. Each camp comprises 3 en-suite safari tents sharing a private outdoor area — perfect for families and groups. All the good parts of camping, none of the bad.',
+      max_occupancy: 6,
+      base_rate: 1307,
+      amenities: ['3 safari tents per camp', 'King bed per tent', 'Overhead fan per tent', 'Wardrobe & charging points', 'Coffee station', 'Mini fridge', 'Braai facilities', 'Outdoor seating area', 'Private outdoor shower & toilet', 'Free Wi-Fi', 'Room service', 'Breakfast available'],
+      images: [
+        `${WIX}/57b862_048ef096c8d246b1a98c229af8eab35e~mv2.jpg`,
+      ],
+    },
+    {
+      name: 'Sea View Tent',
+      description: 'Luxury tented accommodation with uninterrupted ocean views from the ridge. Wake up to panoramic sea vistas from your king bed in this exclusive, secluded tent perched on the coastal hillside.',
+      max_occupancy: 2,
+      base_rate: 3441,
+      amenities: ['King bed', 'Ocean-facing position', 'Private outdoor shower & toilet', 'Tea/coffee station', 'Mini fridge', 'Electricity & power points', 'Overhead fan', 'Braai facilities', 'Free Wi-Fi', 'Room service', 'Breakfast available'],
+      images: [
+        `${WIX}/57b862_7a8f19788c374f5481dd67454d601214~mv2.jpg`,
+      ],
+    },
+  ];
+
+  const insertRoomType = db.prepare(`
+    INSERT INTO room_types (property_id, name, description, max_occupancy, base_rate, currency, amenities_json, image_urls_json)
+    VALUES (1, ?, ?, ?, ?, 'ZAR', ?, ?)
+  `);
+  const findRoomType = db.prepare('SELECT id FROM room_types WHERE property_id = 1 AND name = ?');
+
+  for (const rt of SKY_ROOM_TYPES) {
+    if (!findRoomType.get(rt.name)) {
+      insertRoomType.run(
+        rt.name, rt.description, rt.max_occupancy, rt.base_rate,
+        JSON.stringify(rt.amenities), JSON.stringify(rt.images)
+      );
+      console.log(`[seed] Room type added: ${rt.name}`);
+    }
   }
 
   console.log('Database migrations complete');
