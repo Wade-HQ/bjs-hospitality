@@ -363,6 +363,80 @@ async function runMigrations(db) {
     }
   }
 
+  // ── Membene room types (idempotent by name, property 2) ────────────────────
+  const MEM_ROOM_TYPES = [
+    {
+      name: 'Dune Chalet — 1 Bedroom',
+      description: 'Perched on the lower coastal dunes with panoramic ocean views and cool easterly sea breezes. This open-concept chalet is fully self-catering, with an indoor-outdoor design that frames forest sunsets to the west and ocean sunrises to the east.',
+      max_occupancy: 3,
+      base_rate: 3768,
+      amenities: ['King bed', 'Sofa bed in living area', 'Fully-equipped kitchen', 'Open-plan dining & living area', 'En-suite bathroom', 'Indoor & outdoor shower', 'Stainless steel braai & fire pit', 'Private patio', 'Overhead fan', 'Daily cleaning service'],
+      images: [`${WIX}/57b862_ab3af254502f434284229c48c104334d~mv2.jpg`, `${WIX}/57b862_ee58137cbd3642e5affb7a0d47594604~mv2.jpg`],
+    },
+    {
+      name: 'Dune Chalet — 2 Bedroom',
+      description: 'The spacious two-bedroom dune chalet sits on the lower coastal dune with uninterrupted ocean views. Designed for families and groups, it offers two private bedrooms, a fully-equipped kitchen, and an outdoor braai area steps from the beach.',
+      max_occupancy: 7,
+      base_rate: 3768,
+      amenities: ['King bed (bedroom 1)', '2 single beds (bedroom 2)', 'Sofa bed + bunk bed option', 'Fully-equipped kitchen', 'Open-plan dining & living area', 'Shared bathroom with indoor & outdoor shower', 'Stainless steel braai & fire pit', 'Private patio', 'Overhead fan', 'Daily cleaning service'],
+      images: [`${WIX}/57b862_07a5fce1b6124bea8b92935b67e6c436~mv2.jpg`, `${WIX}/57b862_94612a04802a42bfa48b60c069c5e9d5~mv2.jpeg`],
+    },
+    {
+      name: 'Forest Chalet — 1 Bedroom',
+      description: 'Tucked into lush coastal woodland at the edge of a pristine wetland, this chalet offers an intimate connection to nature with exceptional game viewing from your own patio. Wake to the sounds of birds and wildlife while staying in complete comfort.',
+      max_occupancy: 4,
+      base_rate: 3768,
+      amenities: ['King bed', 'Single bed', 'Sofa bed in living area', 'Fully-equipped kitchen', 'Open-plan living & dining area', 'Private bathroom with indoor & outdoor shower', 'Outdoor braai & fire pit', 'Nature-facing patio', 'Overhead fan', 'Daily cleaning service'],
+      images: [`${WIX}/57b862_8009a975b757476e849022bc5bd92414~mv2.jpg`, `${WIX}/57b862_30b743d967b4411bbb8f55def9322746~mv2.jpg`],
+    },
+    {
+      name: 'Forest Chalet — 2 Bedroom',
+      description: 'The two-bedroom forest chalet nestles in the coastal woodland on the wetland\'s edge — ideal for families seeking seclusion and wildlife encounters. The same immersive nature setting as the one-bedroom, with space for up to six guests.',
+      max_occupancy: 6,
+      base_rate: 3768,
+      amenities: ['King bed (bedroom 1)', '2 single beds (bedroom 2)', 'Sofa bed in living area', 'Fully-equipped kitchen', 'Open-plan living & dining area', 'Private bathroom with indoor & outdoor shower', 'Outdoor braai & fire pit', 'Nature-facing patio', 'Overhead fan', 'Daily cleaning service'],
+      images: [`${WIX}/57b862_6a4db97d6d554535ad4a94515dc663fc~mv2.jpg`, `${WIX}/57b862_52ff6c9f515e46d7a99ec1f7a64c84c8~mv2.jpg`],
+    },
+    {
+      name: 'Hilltop Chalet',
+      description: 'Perched on an elevated ridge with sweeping panoramic views over the forest canopy and Indian Ocean horizon. The Hilltop Chalet is designed for couples and digital nomads seeking seclusion and tranquillity — no braai, no crowds, just the sound of waves, birds, and monkeys.',
+      max_occupancy: 3,
+      base_rate: 3900,
+      amenities: ['King bed', 'Open-plan living & dining area', 'Kitchenette with bar fridge & microwave', 'Private bathroom with indoor & outdoor shower', 'Panoramic forest & ocean views', 'Private patio', 'Overhead fan', 'Daily cleaning service'],
+      images: [`${WIX}/57b862_75e09a3361874cf4ab72081110edc881~mv2.jpg`, `${WIX}/57b862_a5fd72bf9f8645e8bcc21fad9d6e875f~mv2.jpg`],
+    },
+    {
+      name: 'Beachside Campsite',
+      description: 'Beachfront campsites situated just behind the dunes, each with a private braai, hot showers, power, and USB charging. Self-contained and designed for overlanders — caravan-friendly sites available. Group camp (Camp 8) includes a shared kitchen, boma, and communal dining area.',
+      max_occupancy: 10,
+      base_rate: 0,
+      amenities: ['Private braai & fire pit', 'Hot water showers (daily cleaned)', 'Power outlet (6A per site)', 'USB charging points', 'Scullery & dishwashing area', 'Laundry service', 'Electricity 18–22 hours', 'Trailer tent & caravan-friendly (select sites)', 'Group camp option with shared kitchen & boma'],
+      images: [`${WIX}/57b862_722643ae249744bbb4ff631325fedc5f~mv2.jpg`, `${WIX}/57b862_1bf1fe4c560940d6881842c4c480e762~mv2.jpg`],
+    },
+  ];
+
+  const insertMemRoomType = db.prepare(`
+    INSERT INTO room_types (property_id, name, description, max_occupancy, base_rate, currency, amenities_json, image_urls_json)
+    VALUES (2, ?, ?, ?, ?, 'ZAR', ?, ?)
+  `);
+  const findMemRoomType = db.prepare('SELECT id FROM room_types WHERE property_id = 2 AND name = ?');
+
+  for (const rt of MEM_ROOM_TYPES) {
+    if (!findMemRoomType.get(rt.name)) {
+      insertMemRoomType.run(
+        rt.name, rt.description, rt.max_occupancy, rt.base_rate,
+        JSON.stringify(rt.amenities), JSON.stringify(rt.images)
+      );
+      console.log(`[seed] Membene room type added: ${rt.name}`);
+    }
+  }
+
+  // Update Membene property details
+  db.prepare(`UPDATE properties SET
+    name='Ponta Membene Lodge', contact_email='office@membene.co.mz',
+    contact_phone='+258870162730'
+    WHERE id=2`).run();
+
   console.log('Database migrations complete');
 }
 
