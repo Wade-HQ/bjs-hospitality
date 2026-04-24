@@ -276,6 +276,19 @@ async function runMigrations(db) {
     );
   `);
 
+  // ── Column migrations (idempotent — SQLite throws if column already exists) ──
+  const roomMigrations = [
+    `ALTER TABLE rooms ADD COLUMN name TEXT`,
+    `ALTER TABLE rooms ADD COLUMN max_occupancy INTEGER DEFAULT 2`,
+    `ALTER TABLE rooms ADD COLUMN max_adults INTEGER`,
+    `ALTER TABLE rooms ADD COLUMN bed_config TEXT`,
+    `ALTER TABLE rooms ADD COLUMN bed_config_alt TEXT`,
+    `ALTER TABLE rooms ADD COLUMN show_online INTEGER DEFAULT 1`,
+  ];
+  for (const sql of roomMigrations) {
+    try { db.exec(sql); } catch (_) { /* column already exists */ }
+  }
+
   // Seed properties if empty
   const propCount = db.prepare('SELECT COUNT(*) as c FROM properties').get();
   if (propCount.c === 0) {
