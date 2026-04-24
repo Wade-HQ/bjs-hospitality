@@ -127,43 +127,48 @@ router.get('/sso', (req, res) => {
     appRole = 'ota_admin';
   }
 
-  const db = getDb();
-  const email = payload.email.trim().toLowerCase();
+  try {
+    const db = getDb();
+    const email = payload.email.trim().toLowerCase();
 
-  // Find or create the user in OTA's user table
-  let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-  if (!user) {
-    const hash = bcrypt.hashSync(crypto.randomBytes(32).toString('hex'), 10);
-    db.prepare(`INSERT INTO users (name, email, password_hash, role, property_access_json, active, force_password_change)
-      VALUES (?, ?, ?, ?, '[1,2]', 1, 0)`)
-      .run(payload.name, email, hash, appRole);
-    user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-  } else {
-    // Keep name and role in sync with portal
-    db.prepare('UPDATE users SET name = ?, role = ? WHERE email = ?')
-      .run(payload.name, appRole, email);
-    user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    // Find or create the user in OTA's user table
+    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    if (!user) {
+      const hash = bcrypt.hashSync(crypto.randomBytes(32).toString('hex'), 10);
+      db.prepare(`INSERT INTO users (name, email, password_hash, role, property_access_json, active, force_password_change)
+        VALUES (?, ?, ?, ?, '[1,2]', 1, 0)`)
+        .run(payload.name, email, hash, appRole);
+      user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    } else {
+      // Keep name and role in sync with portal
+      db.prepare('UPDATE users SET name = ?, role = ? WHERE email = ?')
+        .run(payload.name, appRole, email);
+      user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    }
+
+    // Create a session
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+    db.prepare('DELETE FROM sessions WHERE user_id = ? AND expires_at <= datetime("now")').run(user.id);
+    db.prepare('INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)').run(user.id, sessionToken, expiresAt);
+
+    res.cookie('bjs_session', sessionToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      expires: new Date(expiresAt),
+      path: '/'
+    });
+
+    if (req.query.redirect) {
+      return res.redirect(302, req.query.redirect);
+    }
+    return res.json({
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, force_password_change: false }
+    });
+  } catch (ssoErr) {
+    console.error('[SSO] Error after JWT verify:', ssoErr.message, ssoErr.stack);
+    return res.status(500).json({ error: 'SSO session creation failed', detail: ssoErr.message });
   }
-
-  // Create a session
-  const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
-  db.prepare('DELETE FROM sessions WHERE user_id = ? AND expires_at <= datetime("now")').run(user.id);
-  db.prepare('INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)').run(user.id, token, expiresAt);
-
-  res.cookie('bjs_session', token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    expires: new Date(expiresAt),
-    path: '/'
-  });
-
-  if (req.query.redirect) {
-    return res.redirect(302, req.query.redirect);
-  }
-  return res.json({
-    user: { id: user.id, name: user.name, email: user.email, role: user.role, force_password_change: false }
-  });
 });
 
 module.exports = router;
