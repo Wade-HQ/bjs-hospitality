@@ -17,7 +17,7 @@ const EMPTY_ROOM = {
   bed_config: '', bed_config_alt: '', show_online: true, notes: '',
 };
 
-const EMPTY_RT = { name: '', description: '', max_occupancy: 2, base_rate: 0 };
+const EMPTY_RT = { name: '' };
 
 export default function Settings() {
   const { property, reload: reloadProperty } = useProperty();
