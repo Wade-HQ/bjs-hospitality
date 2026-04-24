@@ -287,6 +287,7 @@ async function runMigrations(db) {
     `ALTER TABLE rooms ADD COLUMN description TEXT`,
     `ALTER TABLE rooms ADD COLUMN amenities_json TEXT DEFAULT '[]'`,
     `ALTER TABLE rooms ADD COLUMN wheelchair_accessible INTEGER DEFAULT 0`,
+    `ALTER TABLE rooms ADD COLUMN bedrooms INTEGER DEFAULT 1`,
   ];
   for (const sql of roomMigrations) {
     try { db.exec(sql); } catch (_) { /* column already exists */ }
