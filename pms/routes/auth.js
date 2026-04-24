@@ -117,8 +117,11 @@ router.post('/change-password', requireAuth, (req, res) => {
 router.get('/sso', (req, res) => {
   if (!SSO_SECRET) return res.status(503).json({ error: 'SSO not configured' });
 
-  const ssoToken = req.cookies && req.cookies.bjs_sso;
-  if (!ssoToken) return res.status(401).json({ error: 'No SSO token' });
+  const ssoToken = req.query._sso || (req.cookies && req.cookies.bjs_sso);
+  if (!ssoToken) {
+    if (req.query.redirect) return res.redirect(302, req.query.redirect + '?sso_error=no_token');
+    return res.status(401).json({ error: 'No SSO token' });
+  }
 
   let payload;
   try {
