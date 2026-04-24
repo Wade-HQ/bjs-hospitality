@@ -123,7 +123,8 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
 router.post('/', requireAuth, requireRole('owner','hotel_manager'), (req, res) => {
   const db = getDb();
   const { room_number, name, room_type_id, floor, status = 'available', notes,
-          max_occupancy, max_adults, bed_config, bed_config_alt, show_online = 1 } = req.body;
+          max_occupancy, max_adults, bed_config, bed_config_alt, show_online = 1,
+          description, amenities_json, wheelchair_accessible = 0 } = req.body;
 
   const displayName = name || room_number;
   if (!displayName) return res.status(400).json({ error: 'room name is required' });
