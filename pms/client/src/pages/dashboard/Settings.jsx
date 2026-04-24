@@ -434,10 +434,22 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Max occupancy + Max adults */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Bedrooms + Max occupancy + Max adults */}
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Max Occupancy (total guests)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bedrooms</label>
+              <select
+                value={roomForm.bedrooms ?? 1}
+                onChange={e => setRoomForm(p => ({ ...p, bedrooms: Number(e.target.value) }))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              >
+                {[1,2,3,4,5].map(n => (
+                  <option key={n} value={n}>{n} Bedroom{n > 1 ? 's' : ''}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Max Guests</label>
               <input type="number" min={1} max={30}
                 value={roomForm.max_occupancy || ''}
                 onChange={e => setRoomForm(p => ({ ...p, max_occupancy: e.target.value }))}
