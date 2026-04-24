@@ -78,17 +78,20 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
 
   db.prepare(`
     UPDATE rooms SET
-      status         = COALESCE(?, status),
-      notes          = COALESCE(?, notes),
-      floor          = COALESCE(?, floor),
-      room_number    = COALESCE(?, room_number),
-      name           = ?,
-      room_type_id   = COALESCE(?, room_type_id),
-      max_occupancy  = ?,
-      max_adults     = ?,
-      bed_config     = ?,
-      bed_config_alt = ?,
-      show_online    = ?
+      status                = COALESCE(?, status),
+      notes                 = COALESCE(?, notes),
+      floor                 = COALESCE(?, floor),
+      room_number           = COALESCE(?, room_number),
+      name                  = ?,
+      room_type_id          = COALESCE(?, room_type_id),
+      max_occupancy         = ?,
+      max_adults            = ?,
+      bed_config            = ?,
+      bed_config_alt        = ?,
+      show_online           = ?,
+      description           = ?,
+      amenities_json        = ?,
+      wheelchair_accessible = ?
     WHERE id = ? AND property_id = ?
   `).run(
     status || null, notes || null, floor || null, room_number || null,
@@ -99,6 +102,9 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
     bed_config ?? null,
     bed_config_alt ?? null,
     show_online != null ? (show_online ? 1 : 0) : null,
+    description ?? null,
+    amenities_json ?? null,
+    wheelchair_accessible != null ? (wheelchair_accessible ? 1 : 0) : null,
     req.params.id, PROPERTY_ID()
   );
 
