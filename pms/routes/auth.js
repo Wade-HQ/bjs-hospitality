@@ -113,4 +113,72 @@ router.post('/change-password', requireAuth, (req, res) => {
   return res.json({ ok: true });
 });
 
+// GET /api/auth/sso — authenticate via BJS portal SSO cookie
+router.get('/sso', (req, res) => {
+  if (!SSO_SECRET) return res.status(503).json({ error: 'SSO not configured' });
+
+  const ssoToken = req.cookies && req.cookies.bjs_sso;
+  if (!ssoToken) return res.status(401).json({ error: 'No SSO token' });
+
+  let payload;
+  try {
+    payload = jwt.verify(ssoToken, SSO_SECRET);
+  } catch (_) {
+    return res.status(401).json({ error: 'Invalid SSO token' });
+  }
+
+  // Must have portal PMS access or be super admin
+  const role = payload.roles && payload.roles.pms;
+  if (!payload.isSuperAdmin && !role) {
+    return res.status(403).json({ error: 'No PMS access in portal' });
+  }
+
+  // Map portal role to PMS role
+  let appRole = 'front_desk';
+  if (payload.isSuperAdmin || role === 'super_admin' || role === 'admin') {
+    appRole = 'hotel_manager';
+  }
+
+  const propertyId = parseInt(process.env.PROPERTY_ID, 10) || 1;
+  const db = getDb();
+  const email = payload.email.trim().toLowerCase();
+
+  // Find or create the user in PMS's user table
+  let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  if (!user) {
+    const hash = bcrypt.hashSync(crypto.randomBytes(32).toString('hex'), 10);
+    db.prepare(`INSERT INTO users (name, email, password_hash, role, property_access_json, active, force_password_change)
+      VALUES (?, ?, ?, ?, '[1,2]', 1, 0)`)
+      .run(payload.name, email, hash, appRole);
+    user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  } else {
+    db.prepare('UPDATE users SET name = ?, role = ? WHERE email = ?')
+      .run(payload.name, appRole, email);
+    user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  }
+
+  // Verify property access
+  let propertyAccess = [];
+  try { propertyAccess = JSON.parse(user.property_access_json || '[]'); } catch (_) {}
+  if (!propertyAccess.includes(propertyId)) {
+    return res.status(403).json({ error: 'No access to this property' });
+  }
+
+  // Create session
+  const token = crypto.randomBytes(48).toString('hex');
+  const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+  db.prepare('INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)').run(user.id, token, expiresAt);
+
+  res.cookie('bjs_session', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 8 * 60 * 60 * 1000
+  });
+
+  return res.json({
+    user: { id: user.id, name: user.name, email: user.email, role: user.role, force_password_change: false }
+  });
+});
+
 module.exports = router;
