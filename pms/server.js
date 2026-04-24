@@ -48,6 +48,28 @@ app.use('/api/reports',      require('./routes/reports'));
 app.use('/api/ical',         require('./routes/ical'));
 app.use('/api/settings',     require('./routes/settings'));
 
+// ─── GET /api/health ─────────────────────────────────────────────────────────
+
+app.get('/api/health', (req, res) => {
+  try {
+    const db = getDb();
+    db.prepare('SELECT 1').get();
+    const propertyId = process.env.PROPERTY_ID || 'unknown';
+    res.json({
+      status: 'ok',
+      app: `kudu-pms-property-${propertyId}`,
+      version: '1.0.0',
+      db: 'connected',
+      db_path: process.env.DATABASE_PATH || '/opt/bjs-hospitality/database/hospitality.db',
+      property_id: propertyId,
+      uptime_seconds: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (e) {
+    res.status(500).json({ status: 'error', db: 'failed', error: e.message });
+  }
+});
+
 // ── Serve built React frontend ────────────────────────────
 const distPath = path.join(__dirname, 'client', 'dist');
 if (fs.existsSync(distPath)) {
