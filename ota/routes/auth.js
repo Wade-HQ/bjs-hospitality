@@ -158,6 +158,9 @@ router.get('/sso', (req, res) => {
     path: '/'
   });
 
+  if (req.query.redirect) {
+    return res.redirect(302, req.query.redirect);
+  }
   return res.json({
     user: { id: user.id, name: user.name, email: user.email, role: user.role, force_password_change: false }
   });
