@@ -292,6 +292,9 @@ export default function Settings() {
 
                               {/* Room details */}
                               <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                                {r.bedrooms > 1 && (
+                                  <span>🛏 {r.bedrooms} bed</span>
+                                )}
                                 {(r.max_occupancy || r.max_adults) && (
                                   <span>
                                     👥 {r.max_occupancy ? `${r.max_occupancy} guests` : ''}
