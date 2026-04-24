@@ -192,15 +192,7 @@ export default function Settings() {
                             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
                               {rtRooms.length} room{rtRooms.length !== 1 ? 's' : ''}
                             </span>
-                            {rt.base_rate > 0 && (
-                              <span className="text-xs text-emerald-600 font-medium">
-                                {rt.currency || 'ZAR'} {Number(rt.base_rate).toLocaleString()}/night
-                              </span>
-                            )}
                           </div>
-                          {rt.description && (
-                            <p className="text-xs text-gray-500 mt-1">{rt.description}</p>
-                          )}
                         </div>
                         <div className="flex gap-2 flex-shrink-0">
                           <button onClick={() => openAddRoom(rt.id)}
