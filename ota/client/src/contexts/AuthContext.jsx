@@ -8,10 +8,23 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/api/auth/me')
-      .then(res => setUser(res.data.user || res.data))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+    const init = async () => {
+      try {
+        const res = await api.get('/api/auth/me');
+        setUser(res.data.user || res.data);
+      } catch (_) {
+        // No existing session — try portal SSO cookie
+        try {
+          const res = await api.get('/api/auth/sso');
+          setUser(res.data.user);
+        } catch (__) {
+          setUser(null);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
   }, []);
 
   const login = async (email, password) => {
