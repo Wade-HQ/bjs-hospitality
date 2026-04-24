@@ -13,14 +13,16 @@ router.get('/', requireAuth, (req, res) => {
   const { available, check_in, check_out, room_type_id } = req.query;
 
   let query = `
-    SELECT r.id, r.room_number, r.floor, r.status, r.notes, r.created_at,
-           rt.id as room_type_id, rt.name as room_type_name, rt.max_occupancy,
+    SELECT r.id, r.room_number, r.name, r.floor, r.status, r.notes,
+           r.max_occupancy, r.max_adults, r.bed_config, r.bed_config_alt,
+           r.show_online, r.created_at,
+           rt.id as room_type_id, rt.name as room_type_name,
+           COALESCE(r.max_occupancy, rt.max_occupancy) as max_occupancy,
            rt.base_rate, rt.amenities_json, rt.image_urls_json,
-           COALESCE(r_cur.currency, rt.currency, p.currency) as currency
+           COALESCE(rt.currency, p.currency) as currency
     FROM rooms r
     LEFT JOIN room_types rt ON rt.id = r.room_type_id
     LEFT JOIN properties p ON p.id = r.property_id
-    LEFT JOIN (SELECT id, currency FROM room_types) r_cur ON r_cur.id = r.room_type_id
     WHERE r.property_id = ?
   `;
   const params = [PROPERTY_ID()];
