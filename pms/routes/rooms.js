@@ -139,13 +139,15 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager'), (req, res) =
   const result = db.prepare(`
     INSERT INTO rooms
       (property_id, room_number, name, room_type_id, floor, status, notes,
-       max_occupancy, max_adults, bed_config, bed_config_alt, show_online)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       max_occupancy, max_adults, bed_config, bed_config_alt, show_online,
+       description, amenities_json, wheelchair_accessible)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     PROPERTY_ID(), displayName, name || null, room_type_id || null, floor || null, status, notes || null,
     max_occupancy != null ? Number(max_occupancy) : null,
     max_adults != null ? Number(max_adults) : null,
-    bed_config || null, bed_config_alt || null, show_online ? 1 : 0
+    bed_config || null, bed_config_alt || null, show_online ? 1 : 0,
+    description || null, amenities_json || null, wheelchair_accessible ? 1 : 0
   );
 
   const room = db.prepare(`
