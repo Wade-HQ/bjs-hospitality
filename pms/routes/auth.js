@@ -137,6 +137,7 @@ router.get('/sso', (req, res) => {
     appRole = 'hotel_manager';
   }
 
+  try {
   const propertyId = parseInt(process.env.PROPERTY_ID, 10) || 1;
   const db = getDb();
   const email = payload.email.trim().toLowerCase();
