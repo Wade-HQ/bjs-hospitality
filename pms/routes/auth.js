@@ -2,10 +2,12 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const { getDb } = require('../db/index');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
+const SSO_SECRET = process.env.SSO_SECRET || '';
 
 // POST /api/auth/login
 router.post('/login', (req, res) => {
