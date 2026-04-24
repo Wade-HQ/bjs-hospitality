@@ -117,15 +117,10 @@ router.get('/sso', (req, res) => {
     return res.status(401).json({ error: 'Invalid SSO token' });
   }
 
-  // Must have portal OTA access or be super admin
+  // Map portal role to OTA role — any valid portal user gets access
   const role = payload.roles && payload.roles.ota;
-  if (!payload.isSuperAdmin && !role) {
-    return res.status(403).json({ error: 'No OTA access in portal' });
-  }
-
-  // Map portal role to OTA role
   let appRole = 'front_desk';
-  if (payload.isSuperAdmin || role === 'super_admin' || role === 'admin') {
+  if (payload.isSuperAdmin || payload.isAdmin || role === 'super_admin' || role === 'admin') {
     appRole = 'ota_admin';
   }
 
