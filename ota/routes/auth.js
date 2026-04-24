@@ -103,4 +103,66 @@ router.post('/change-password', requireAuth, (req, res) => {
   return res.json({ ok: true });
 });
 
+// GET /api/auth/sso — authenticate via BJS portal SSO cookie
+router.get('/sso', (req, res) => {
+  if (!SSO_SECRET) return res.status(503).json({ error: 'SSO not configured' });
+
+  const ssoToken = req.cookies && req.cookies.bjs_sso;
+  if (!ssoToken) return res.status(401).json({ error: 'No SSO token' });
+
+  let payload;
+  try {
+    payload = jwt.verify(ssoToken, SSO_SECRET);
+  } catch (_) {
+    return res.status(401).json({ error: 'Invalid SSO token' });
+  }
+
+  // Must have portal OTA access or be super admin
+  const role = payload.roles && payload.roles.ota;
+  if (!payload.isSuperAdmin && !role) {
+    return res.status(403).json({ error: 'No OTA access in portal' });
+  }
+
+  // Map portal role to OTA role
+  let appRole = 'front_desk';
+  if (payload.isSuperAdmin || role === 'super_admin' || role === 'admin') {
+    appRole = 'ota_admin';
+  }
+
+  const db = getDb();
+  const email = payload.email.trim().toLowerCase();
+
+  // Find or create the user in OTA's user table
+  let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  if (!user) {
+    const hash = bcrypt.hashSync(crypto.randomBytes(32).toString('hex'), 10);
+    db.prepare(`INSERT INTO users (name, email, password_hash, role, property_access_json, active, force_password_change)
+      VALUES (?, ?, ?, ?, '[1,2]', 1, 0)`)
+      .run(payload.name, email, hash, appRole);
+    user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  } else {
+    // Keep name and role in sync with portal
+    db.prepare('UPDATE users SET name = ?, role = ? WHERE email = ?')
+      .run(payload.name, appRole, email);
+    user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  }
+
+  // Create a session
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+  db.prepare('DELETE FROM sessions WHERE user_id = ? AND expires_at <= datetime("now")').run(user.id);
+  db.prepare('INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)').run(user.id, token, expiresAt);
+
+  res.cookie('bjs_session', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    expires: new Date(expiresAt),
+    path: '/'
+  });
+
+  return res.json({
+    user: { id: user.id, name: user.name, email: user.email, role: user.role, force_password_change: false }
+  });
+});
+
 module.exports = router;
