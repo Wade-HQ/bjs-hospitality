@@ -4,6 +4,7 @@ const { getDb } = require('../db/index');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { createNotification } = require('../utils/notifications');
 const { sendBookingConfirmation, sendBookingCancellation } = require('../utils/email');
+const { calculateBookingPrice } = require('../utils/pricing');
 
 const router = express.Router();
 
