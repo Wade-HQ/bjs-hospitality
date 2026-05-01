@@ -416,20 +416,28 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
     INSERT INTO bookings (
       booking_ref, source, property_id, room_id, room_type_id, guest_id,
       check_in, check_out, nights, adults, children,
-      room_rate, extras_json, subtotal, tax_amount, tax_rate, discount_amount, total_amount,
+      room_rate, meal_package_id, meal_total, extras_json,
+      subtotal, tax_amount, tax_rate, discount_amount, total_amount,
       currency, commission_rate, commission_amount, net_to_property,
-      status, payment_status, special_requests, internal_notes, channel_booking_ref
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      status, payment_status, special_requests, internal_notes, channel_booking_ref, region
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     bookingRef, source, PROPERTY_ID(),
     resolvedRoomId || null, resolvedRoomTypeId || null, resolvedGuestId,
-    check_in, check_out, nights, parseInt(adults), parseInt(children),
-    roomRate, extras_json || '[]',
-    subtotal, taxAmount, taxRate, parseFloat(discount_amount || 0), totalAmount,
+    check_in, check_out, nights, parseInt(adults), parseInt(children || 0),
+    roomRate,
+    meal_package_id ? parseInt(meal_package_id) : null,
+    mealTotal,
+    extras_json || '[]',
+    subtotal, taxAmount,
+    property.tax_rate || 0,
+    parseFloat(discount_amount || 0), totalAmount,
     property.currency || 'USD',
     effectiveCommissionRate, commissionAmount, netToProperty,
     'confirmed', 'unpaid',
-    special_requests || null, internal_notes || null, channel_booking_ref || null
+    special_requests || null, internal_notes || null,
+    channel_booking_ref || null,
+    region || 'international'
   );
 
   const newBookingId = bookingResult.lastInsertRowid;
