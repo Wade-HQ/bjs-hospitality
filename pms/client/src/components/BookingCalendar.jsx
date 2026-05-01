@@ -190,7 +190,7 @@ export default function BookingCalendar({ mode = 'booking', onNewBooking }) {
   const handleBookingClick = async (bookingId) => {
     try {
       const res = await api.get(`/api/bookings/${bookingId}`);
-      setSelectedBooking(res.data);
+      setSelectedBooking(res.data.booking);
       setSidebarOpen(true);
     } catch (_) {
       addToast('Failed to load booking', 'error');
