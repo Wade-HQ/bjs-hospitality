@@ -101,7 +101,7 @@ On schema migration, for every existing room type insert two rows into `room_typ
 
 ## Section 2: Pricing Calculation Logic
 
-Implemented as a shared helper `calculateBookingPrice(params)` used by both the booking creation route and the price-preview API endpoint.
+Implemented as a shared helper `calculateBookingPrice(params)` in `pms/utils/pricing.js`, used by both the booking creation route and the price-preview API endpoint.
 
 ```
 Input:
