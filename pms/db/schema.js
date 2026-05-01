@@ -315,6 +315,12 @@ async function runMigrations(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE INDEX IF NOT EXISTS idx_seasonal_adjustments_property_dates
+      ON seasonal_adjustments(property_id, start_date, end_date);
+
+    CREATE INDEX IF NOT EXISTS idx_meal_packages_property
+      ON meal_packages(property_id);
   `);
 
   // ── Column migrations (idempotent — SQLite throws if column already exists) ──
