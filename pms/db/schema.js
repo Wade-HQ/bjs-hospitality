@@ -532,6 +532,11 @@ async function runMigrations(db) {
         JSON.stringify(rt.amenities), JSON.stringify(rt.images)
       );
       console.log(`[seed] Membene room type added: ${rt.name}`);
+      const rtId = db.prepare('SELECT id FROM room_types WHERE property_id=2 AND name=? ORDER BY id DESC LIMIT 1').get(rt.name)?.id;
+      if (rtId) {
+        db.prepare('INSERT OR IGNORE INTO room_type_rates (room_type_id, region, rate_per_person) VALUES (?, ?, ?)').run(rtId, 'international', rt.base_rate || 0);
+        db.prepare('INSERT OR IGNORE INTO room_type_rates (room_type_id, region, rate_per_person) VALUES (?, ?, ?)').run(rtId, 'sadc', rt.base_rate || 0);
+      }
     }
     db.prepare('UPDATE properties SET room_types_seeded=1 WHERE id=2').run();
     console.log('[seed] Membene room types seeded — will not re-seed on restart');
