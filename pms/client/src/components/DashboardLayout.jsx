@@ -15,7 +15,6 @@ const NAV_ITEMS = [
   { label: 'Bookings', path: '/dashboard/bookings', icon: '🏷' },
   { label: 'Guests', path: '/dashboard/guests', icon: '👤' },
   { label: 'Invoices', path: '/dashboard/invoices', icon: '🧾' },
-  { label: 'Rates', path: '/dashboard/rates', icon: '💲' },
   { label: 'Availability', path: '/dashboard/availability', icon: '🗓' },
   { label: 'Reports', path: '/dashboard/reports', icon: '📊' },
   { label: 'Settings', path: '/dashboard/settings', icon: '⚙' },
