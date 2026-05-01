@@ -944,6 +944,71 @@ export default function Settings() {
           </div>
         </div>
       )}
+
+      {/* Meal Package Modal */}
+      <Modal open={mealModal} onClose={() => setMealModal(false)} title={mealForm.id ? 'Edit Meal Package' : 'Add Meal Package'}>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input type="text" value={mealForm.name} onChange={e => setMealForm(p => ({ ...p, name: e.target.value }))}
+              placeholder="e.g. B&B, Half Board, Full Board"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price per person per night ({property?.currency})</label>
+            <input type="number" step="0.01" value={mealForm.price_per_person}
+              onChange={e => setMealForm(p => ({ ...p, price_per_person: e.target.value }))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div className="flex flex-wrap gap-4">
+            {[['is_online','Online'],['is_sto','STO'],['is_agent','Agent'],['is_ota','OTA']].map(([k,l]) => (
+              <label key={k} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={!!mealForm[k]} onChange={e => setMealForm(p => ({ ...p, [k]: e.target.checked }))} />
+                {l}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6">
+          <button onClick={() => setMealModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+          <button onClick={saveMealPackage} className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium">Save</button>
+        </div>
+      </Modal>
+
+      {/* Season Modal */}
+      <Modal open={seasonModal} onClose={() => setSeasonModal(false)} title={seasonForm.id ? 'Edit Season' : 'Add Seasonal Adjustment'}>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input type="text" value={seasonForm.name} onChange={e => setSeasonForm(p => ({ ...p, name: e.target.value }))}
+              placeholder="e.g. Peak Season Dec–Jan"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">% Adjustment (positive = peak uplift, negative = discount)</label>
+            <input type="number" step="0.1" value={seasonForm.pct_change}
+              onChange={e => setSeasonForm(p => ({ ...p, pct_change: e.target.value }))}
+              placeholder="e.g. 20 or -15"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">From</label>
+              <input type="date" value={seasonForm.start_date} onChange={e => setSeasonForm(p => ({ ...p, start_date: e.target.value }))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
+              <input type="date" value={seasonForm.end_date} onChange={e => setSeasonForm(p => ({ ...p, end_date: e.target.value }))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6">
+          <button onClick={() => setSeasonModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+          <button onClick={saveSeason} className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium">Save</button>
+        </div>
+      </Modal>
     </div>
   );
 }
