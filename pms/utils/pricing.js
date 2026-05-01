@@ -65,7 +65,7 @@ function calculateBookingPrice(db, {
     const mp = db.prepare('SELECT price_per_person FROM meal_packages WHERE id = ? AND property_id = ?')
       .get(meal_package_id, property_id);
     if (mp) {
-      mealTotal = mp.price_per_person * (parseInt(adults) + parseInt(children || 0)) * parseInt(nights);
+      mealTotal = mp.price_per_person * (adultsInt + childrenInt) * nightsInt;
     }
   }
 
