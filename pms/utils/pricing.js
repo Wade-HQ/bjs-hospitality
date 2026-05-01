@@ -49,12 +49,12 @@ function calculateBookingPrice(db, {
 
   // 3. Nightly occupancy cost
   let nightlyAccommodation;
-  if (parseInt(adults) === 1) {
+  if (adultsInt === 1) {
     nightlyAccommodation = adjustedRate * singleMultiplier;
   } else {
-    nightlyAccommodation = adjustedRate * parseInt(adults);
+    nightlyAccommodation = adjustedRate * adultsInt;
   }
-  nightlyAccommodation += adjustedRate * (childrenPct / 100) * parseInt(children || 0);
+  nightlyAccommodation += adjustedRate * (childrenPct / 100) * childrenInt;
 
   // 4. Accommodation subtotal
   const accommodationSubtotal = nightlyAccommodation * parseInt(nights);
