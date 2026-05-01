@@ -9,10 +9,13 @@ export default function NewBooking() {
   const [roomTypes, setRoomTypes] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [mealPackages, setMealPackages] = useState([]);
+  const [preview, setPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [form, setForm] = useState({
     check_in: '', check_out: '', room_type_id: '', room_id: '',
     adults: 1, children: 0, special_requests: '',
-    source: 'direct', status: 'confirmed',
+    source: 'direct', status: 'confirmed', region: 'international', meal_package_id: '',
     guest: { first_name:'', last_name:'', email:'', phone:'', nationality:'', id_type:'passport', id_number:'' }
   });
 
