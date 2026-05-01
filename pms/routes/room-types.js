@@ -158,13 +158,13 @@ router.put('/:id/rates/:region', requireAuth, requireRole('owner', 'hotel_manage
     INSERT INTO room_type_rates (room_type_id, region, rate_per_person, single_supplement_multiplier, children_pct, is_online, is_sto, is_agent, is_ota)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(room_type_id, region) DO UPDATE SET
-      rate_per_person = COALESCE(excluded.rate_per_person, rate_per_person),
-      single_supplement_multiplier = COALESCE(excluded.single_supplement_multiplier, single_supplement_multiplier),
-      children_pct = COALESCE(excluded.children_pct, children_pct),
-      is_online = COALESCE(excluded.is_online, is_online),
-      is_sto = COALESCE(excluded.is_sto, is_sto),
-      is_agent = COALESCE(excluded.is_agent, is_agent),
-      is_ota = COALESCE(excluded.is_ota, is_ota),
+      rate_per_person = excluded.rate_per_person,
+      single_supplement_multiplier = excluded.single_supplement_multiplier,
+      children_pct = excluded.children_pct,
+      is_online = excluded.is_online,
+      is_sto = excluded.is_sto,
+      is_agent = excluded.is_agent,
+      is_ota = excluded.is_ota,
       updated_at = CURRENT_TIMESTAMP
   `).run(
     req.params.id, region,
