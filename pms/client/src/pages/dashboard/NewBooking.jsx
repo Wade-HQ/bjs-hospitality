@@ -149,6 +149,46 @@ export default function NewBooking() {
           </div>
         </div>
 
+        {/* Price Preview */}
+        {(preview || previewLoading) && (
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-5">
+            {previewLoading ? (
+              <div className="text-sm text-gray-400 text-center">Calculating…</div>
+            ) : preview && (
+              <>
+                <h2 className="font-semibold text-gray-700 mb-3 text-sm">Price Breakdown</h2>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Accommodation</span>
+                    <span className="font-medium">{preview.accommodation_subtotal?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  {preview.meal_total > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Meals</span>
+                      <span className="font-medium">{preview.meal_total?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t border-gray-200 pt-1">
+                    <span className="text-gray-500">Subtotal</span>
+                    <span>{preview.subtotal?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Tax</span>
+                    <span>{preview.tax_amount?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-gray-200 pt-1">
+                    <span className="font-semibold text-primary">Total</span>
+                    <span className="font-bold text-primary text-base">{preview.total_amount?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  {preview.season_name && (
+                    <div className="text-xs text-amber-600 mt-1">* {preview.season_name} adjustment applied</div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="font-semibold text-gray-700 mb-4">Guest Information</h2>
           <div className="grid grid-cols-2 gap-4">
