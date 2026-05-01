@@ -374,23 +374,23 @@ async function runMigrations(db) {
     },
   ];
 
-  const insertRoomType = db.prepare(`
-    INSERT INTO room_types (property_id, name, description, max_occupancy, base_rate, currency, amenities_json, image_urls_json)
-    VALUES (1, ?, ?, ?, ?, 'ZAR', ?, ?)
-  `);
-  const findRoomType = db.prepare('SELECT id FROM room_types WHERE property_id = 1 AND name = ?');
-
-  for (const rt of SKY_ROOM_TYPES) {
-    if (!findRoomType.get(rt.name)) {
+  if (needsSkyS) {
+    const insertRoomType = db.prepare(`
+      INSERT INTO room_types (property_id, name, description, max_occupancy, base_rate, currency, amenities_json, image_urls_json)
+      VALUES (1, ?, ?, ?, ?, 'ZAR', ?, ?)
+    `);
+    for (const rt of SKY_ROOM_TYPES) {
       insertRoomType.run(
         rt.name, rt.description, rt.max_occupancy, rt.base_rate,
         JSON.stringify(rt.amenities), JSON.stringify(rt.images)
       );
       console.log(`[seed] Room type added: ${rt.name}`);
     }
+    db.prepare('UPDATE properties SET room_types_seeded=1 WHERE id=1').run();
+    console.log('[seed] Sky Island room types seeded — will not re-seed on restart');
   }
 
-  // ── Membene room types (idempotent by name, property 2) ────────────────────
+  // ── Membene room types (seeded ONCE on first boot only, property 2) ────────
   const MEM_ROOM_TYPES = [
     {
       name: 'Dune Chalet — 1 Bedroom',
