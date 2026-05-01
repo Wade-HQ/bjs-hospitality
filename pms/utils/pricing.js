@@ -57,7 +57,7 @@ function calculateBookingPrice(db, {
   nightlyAccommodation += adjustedRate * (childrenPct / 100) * childrenInt;
 
   // 4. Accommodation subtotal
-  const accommodationSubtotal = nightlyAccommodation * parseInt(nights);
+  const accommodationSubtotal = nightlyAccommodation * nightsInt;
 
   // 5. Meals
   let mealTotal = 0;
