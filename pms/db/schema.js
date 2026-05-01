@@ -281,7 +281,7 @@ async function runMigrations(db) {
       region TEXT NOT NULL CHECK(region IN ('international', 'sadc')),
       rate_per_person REAL NOT NULL DEFAULT 0,
       single_supplement_multiplier REAL NOT NULL DEFAULT 1.5,
-      children_pct INTEGER NOT NULL DEFAULT 50,
+      children_pct REAL NOT NULL DEFAULT 50,
       is_online INTEGER NOT NULL DEFAULT 1,
       is_sto INTEGER NOT NULL DEFAULT 1,
       is_agent INTEGER NOT NULL DEFAULT 1,
