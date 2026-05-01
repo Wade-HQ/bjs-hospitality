@@ -88,7 +88,10 @@ export default function NewBooking() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
               <select value={form.source} onChange={e => setField('source', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                {['direct','ota_internal','booking_com','airbnb','expedia','google'].map(s => <option key={s} value={s}>{s}</option>)}
+                {[
+                ['direct', 'Direct'], ['booking_com', 'Booking.com'], ['airbnb', 'Airbnb'],
+                ['expedia', 'Expedia'], ['google', 'Google'], ['ota_internal', 'Other OTA'],
+              ].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
             <div>
