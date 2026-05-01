@@ -295,6 +295,13 @@ async function runMigrations(db) {
 
   // One-time seed flag — prevents re-inserting default room types after they've been deleted
   try { db.exec(`ALTER TABLE properties ADD COLUMN room_types_seeded INTEGER DEFAULT 0`); } catch (_) {}
+  // Mark existing properties as already seeded (the column was just added with DEFAULT 0,
+  // but any property that already has room types doesn't need seeding again)
+  db.exec(`
+    UPDATE properties SET room_types_seeded=1
+    WHERE id IN (SELECT DISTINCT property_id FROM room_types)
+    AND room_types_seeded=0
+  `);
 
   // Seed properties if empty
   const propCount = db.prepare('SELECT COUNT(*) as c FROM properties').get();
