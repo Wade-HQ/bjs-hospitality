@@ -57,6 +57,14 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager'), (req, res) =
     amenities_json || '[]', image_urls_json || '[]'
   );
 
+  // Auto-create rate rows for both regions
+  const insertRate = db.prepare(`
+    INSERT OR IGNORE INTO room_type_rates (room_type_id, region, rate_per_person)
+    VALUES (?, ?, ?)
+  `);
+  insertRate.run(result.lastInsertRowid, 'international', parseFloat(base_rate) || 0);
+  insertRate.run(result.lastInsertRowid, 'sadc', parseFloat(base_rate) || 0);
+
   const type = db.prepare('SELECT * FROM room_types WHERE id = ?').get(result.lastInsertRowid);
   return res.status(201).json({ room_type: type });
 });
