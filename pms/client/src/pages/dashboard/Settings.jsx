@@ -519,6 +519,140 @@ export default function Settings() {
         </div>
       )}
 
+      {/* ── RATES ── */}
+      {activeSection === 'rates' && (
+        <div className="space-y-6">
+
+          {/* Room Type Base Rates */}
+          <div className="bg-white rounded-xl border border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-800">Base Rates by Room Type</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Per person per night. International and SADC rates apply separately.</p>
+            </div>
+            {roomTypes.length === 0 ? (
+              <div className="px-6 py-8 text-center text-gray-400 text-sm">No room types yet.</div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {roomTypes.map(rt => {
+                  const rates = roomTypeRates[rt.id] || {};
+                  const intl = rates.international || {};
+                  const sadc = rates.sadc || {};
+                  return (
+                    <RoomTypeRateRow
+                      key={rt.id}
+                      rt={rt}
+                      intl={intl}
+                      sadc={sadc}
+                      currency={property?.currency || 'ZAR'}
+                      onSave={(region, data) => saveRoomTypeRate(rt.id, region, data)}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Meal Packages */}
+          <div className="bg-white rounded-xl border border-gray-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="font-semibold text-gray-800">Meal Packages</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Fixed per person per night — not affected by seasonal adjustments.</p>
+              </div>
+              <button onClick={() => { setMealForm({ name: '', price_per_person: '', is_online: true, is_sto: true, is_agent: true, is_ota: true }); setMealModal(true); }}
+                className="text-sm bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary/90">+ Add Package</button>
+            </div>
+            {mealPackages.length === 0 ? (
+              <div className="px-6 py-8 text-center text-gray-400 text-sm">No meal packages yet.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+                  <tr>
+                    {['Name', 'Price/person/night', 'Online', 'STO', 'Agent', 'OTA', ''].map(h => (
+                      <th key={h} className="px-4 py-3 text-left">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {mealPackages.map(mp => (
+                    <tr key={mp.id}>
+                      <td className="px-4 py-3 font-medium">{mp.name}</td>
+                      <td className="px-4 py-3">{property?.currency} {Number(mp.price_per_person).toLocaleString()}</td>
+                      {['is_online','is_sto','is_agent','is_ota'].map(k => (
+                        <td key={k} className="px-4 py-3">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${mp[k] ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
+                            {mp[k] ? 'On' : 'Off'}
+                          </span>
+                        </td>
+                      ))}
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button onClick={() => { setMealForm({ ...mp, is_online: !!mp.is_online, is_sto: !!mp.is_sto, is_agent: !!mp.is_agent, is_ota: !!mp.is_ota }); setMealModal(true); }}
+                            className="text-xs text-teal hover:underline">Edit</button>
+                          <button onClick={() => deleteMealPackage(mp.id)}
+                            className="text-xs text-red-400 hover:underline">Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Seasonal Adjustments */}
+          <div className="bg-white rounded-xl border border-gray-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="font-semibold text-gray-800">Seasonal Adjustments</h2>
+                <p className="text-xs text-gray-400 mt-0.5">% adjustment applied to accommodation rates only. Positive = peak uplift, negative = low-season discount.</p>
+              </div>
+              <button onClick={() => { setSeasonForm({ name: '', pct_change: '', start_date: '', end_date: '' }); setSeasonModal(true); }}
+                className="text-sm bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary/90">+ Add Season</button>
+            </div>
+            {seasons.length === 0 ? (
+              <div className="px-6 py-8 text-center text-gray-400 text-sm">No seasonal adjustments yet.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+                  <tr>{['Name', '% Change', 'From', 'To', ''].map(h => <th key={h} className="px-4 py-3 text-left">{h}</th>)}</tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {seasons.map((s, i) => {
+                    const overlaps = seasons.some((other, j) => j !== i &&
+                      new Date(s.start_date) <= new Date(other.end_date) &&
+                      new Date(s.end_date) >= new Date(other.start_date));
+                    return (
+                      <tr key={s.id}>
+                        <td className="px-4 py-3 font-medium">
+                          {overlaps && <span title="Overlapping dates — first match wins" className="text-amber-500 mr-1">⚠</span>}
+                          {s.name}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`font-semibold ${s.pct_change >= 0 ? 'text-green-600' : 'text-amber-600'}`}>
+                            {s.pct_change >= 0 ? '+' : ''}{s.pct_change}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">{s.start_date}</td>
+                        <td className="px-4 py-3">{s.end_date}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2">
+                            <button onClick={() => { setSeasonForm(s); setSeasonModal(true); }}
+                              className="text-xs text-teal hover:underline">Edit</button>
+                            <button onClick={() => deleteSeason(s.id)}
+                              className="text-xs text-red-400 hover:underline">Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── PROPERTY / FINANCE / EMAIL ── */}
       {['property', 'finance', 'email'].includes(activeSection) && (() => {
         const sectionMap = { property: 0, finance: 1, email: 2 };
