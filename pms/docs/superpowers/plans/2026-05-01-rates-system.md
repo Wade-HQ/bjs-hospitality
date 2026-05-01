@@ -703,7 +703,6 @@ Replace the existing financial calculation block (from `const roomRate = getRoom
   const roomRate = pricing.adjusted_rate;
   const mealTotal = pricing.meal_total;
   const subtotal = pricing.subtotal;
-  const taxRate = pricing.tax_amount / (pricing.subtotal || 1) * 100;
   const taxAmount = pricing.tax_amount;
   const totalAmount = pricing.total_amount;
 
