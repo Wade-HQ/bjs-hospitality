@@ -156,6 +156,8 @@ async function runMigrations(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- Legacy rate table (date-range / channel model). Retained for compatibility.
+    -- For per-person-sharing pricing, use room_type_rates instead.
     CREATE TABLE IF NOT EXISTS rates (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       property_id INTEGER NOT NULL REFERENCES properties(id),
