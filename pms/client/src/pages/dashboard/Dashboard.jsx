@@ -5,7 +5,7 @@ import { useToast } from '../../contexts/ToastContext.jsx';
 import { useProperty } from '../../contexts/PropertyContext.jsx';
 import StatusBadge from '../../components/StatusBadge.jsx';
 
-function StatCard({ title, value, sub, color = 'primary' }) {
+function StatCard({ title, value, sub, color = 'primary', onClick }) {
   const colorClass = {
     primary: 'border-l-primary',
     gold: 'border-l-gold',
@@ -15,7 +15,10 @@ function StatCard({ title, value, sub, color = 'primary' }) {
   }[color] || 'border-l-primary';
 
   return (
-    <div className={`bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 ${colorClass} p-4`}>
+    <div
+      className={`bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 ${colorClass} p-4 ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+      onClick={onClick}
+    >
       <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{title}</div>
       <div className="text-2xl font-bold text-primary mt-1">{value}</div>
       {sub && <div className="text-xs text-gray-400 mt-1">{sub}</div>}
