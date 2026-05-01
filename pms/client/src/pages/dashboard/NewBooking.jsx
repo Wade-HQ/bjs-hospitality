@@ -21,6 +21,7 @@ export default function NewBooking() {
 
   useEffect(() => {
     api.get('/api/room-types').then(r => setRoomTypes(r.data?.room_types || []));
+    api.get('/api/meal-packages').then(r => setMealPackages(r.data?.meal_packages || []));
   }, []);
 
   useEffect(() => {
