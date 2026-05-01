@@ -271,6 +271,52 @@ export default function Settings() {
     }
   };
 
+  const saveRoomTypeRate = async (roomTypeId, region, data) => {
+    try {
+      await api.put(`/api/room-types/${roomTypeId}/rates/${region}`, data);
+      addToast('Rate saved');
+      load();
+    } catch (e) { addToast(e.response?.data?.error || 'Error saving rate', 'error'); }
+  };
+
+  const saveMealPackage = async () => {
+    try {
+      if (mealForm.id) await api.put(`/api/meal-packages/${mealForm.id}`, mealForm);
+      else await api.post('/api/meal-packages', mealForm);
+      addToast('Meal package saved');
+      setMealModal(false);
+      load();
+    } catch (e) { addToast(e.response?.data?.error || 'Error', 'error'); }
+  };
+
+  const deleteMealPackage = async (id) => {
+    if (!window.confirm('Delete this meal package?')) return;
+    try {
+      await api.delete(`/api/meal-packages/${id}`);
+      addToast('Deleted');
+      load();
+    } catch (e) { addToast(e.response?.data?.error || 'Error', 'error'); }
+  };
+
+  const saveSeason = async () => {
+    try {
+      if (seasonForm.id) await api.put(`/api/seasonal-adjustments/${seasonForm.id}`, seasonForm);
+      else await api.post('/api/seasonal-adjustments', seasonForm);
+      addToast('Season saved');
+      setSeasonModal(false);
+      load();
+    } catch (e) { addToast(e.response?.data?.error || 'Error', 'error'); }
+  };
+
+  const deleteSeason = async (id) => {
+    if (!window.confirm('Delete this seasonal adjustment?')) return;
+    try {
+      await api.delete(`/api/seasonal-adjustments/${id}`);
+      addToast('Deleted');
+      load();
+    } catch (e) { addToast(e.response?.data?.error || 'Error', 'error'); }
+  };
+
   // ── Amenities helpers ─────────────────────────────────────────────────────
   const selectedAmenities = (() => {
     try { return JSON.parse(roomForm.amenities_json || '[]'); } catch { return []; }
