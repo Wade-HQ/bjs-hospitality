@@ -322,7 +322,14 @@ async function runMigrations(db) {
     console.log('Seeded admin user: admin@bluejungle.solutions / ChangeMeNow123!');
   }
 
-  // ── Sky Island room types (idempotent by name) ─────────────────────────────
+  // ── Default room types — seeded ONCE on first boot only ──────────────────────
+  // room_types_seeded flag is set after first seed; deleting a room type will NOT
+  // bring it back on restart. Re-run seed by setting room_types_seeded=0 in DB.
+  const skySeeded = db.prepare('SELECT room_types_seeded FROM properties WHERE id=1').get();
+  const memSeeded = db.prepare('SELECT room_types_seeded FROM properties WHERE id=2').get();
+  const needsSkyS = skySeeded && skySeeded.room_types_seeded === 0;
+  const needsMemS = memSeeded && memSeeded.room_types_seeded === 0;
+
   const WIX = 'https://static.wixstatic.com/media';
   const SKY_ROOM_TYPES = [
     {
