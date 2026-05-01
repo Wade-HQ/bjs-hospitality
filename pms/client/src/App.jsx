@@ -56,7 +56,6 @@ export default function App() {
                 <Route path="/dashboard/guests" element={<Guests />} />
                 <Route path="/dashboard/guests/:id" element={<GuestProfile />} />
                 <Route path="/dashboard/invoices" element={<Invoices />} />
-                <Route path="/dashboard/rates" element={<Rates />} />
                 <Route path="/dashboard/availability" element={<Availability />} />
                 <Route path="/dashboard/reports" element={<Reports />} />
                 <Route path="/dashboard/settings" element={<Settings />} />
