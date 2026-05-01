@@ -260,19 +260,38 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
 
   const nights = Math.round((coDate - ciDate) / (1000 * 60 * 60 * 24));
 
-  // Check availability if room_id given
-  if (room_id) {
-    const available = checkAvailability(db, room_id, check_in, check_out);
+  // Resolve room: if room_id given, check it directly; if only room_type_id, auto-assign first available
+  let resolvedRoomId = room_id ? parseInt(room_id, 10) : null;
+
+  if (resolvedRoomId) {
+    const available = checkAvailability(db, resolvedRoomId, check_in, check_out);
     if (!available) {
       return res.status(409).json({ error: 'Room is not available for the selected dates' });
+    }
+  } else if (room_type_id) {
+    // Auto-assign: find first available room of this type
+    const candidates = db.prepare(`
+      SELECT id FROM rooms
+      WHERE room_type_id = ? AND property_id = ? AND status != 'blocked'
+      ORDER BY room_number
+    `).all(room_type_id, PROPERTY_ID());
+
+    for (const c of candidates) {
+      if (checkAvailability(db, c.id, check_in, check_out)) {
+        resolvedRoomId = c.id;
+        break;
+      }
+    }
+    if (!resolvedRoomId) {
+      return res.status(409).json({ error: 'No rooms available for this room type on the selected dates' });
     }
   }
 
   // Resolve room_type_id from room if not provided
-  let resolvedRoomTypeId = room_type_id;
-  if (room_id && !resolvedRoomTypeId) {
+  let resolvedRoomTypeId = room_type_id ? parseInt(room_type_id, 10) : null;
+  if (resolvedRoomId && !resolvedRoomTypeId) {
     const r = db.prepare('SELECT room_type_id FROM rooms WHERE id = ? AND property_id = ?')
-      .get(room_id, PROPERTY_ID());
+      .get(resolvedRoomId, PROPERTY_ID());
     if (r) resolvedRoomTypeId = r.room_type_id;
   }
 
