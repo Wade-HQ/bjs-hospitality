@@ -44,7 +44,8 @@ export default function BookingDetail() {
   if (loading) return <div className="p-12 text-center text-gray-400">Loading…</div>;
   if (!booking) return <div className="p-12 text-center text-gray-400">Not found</div>;
 
-  const b = booking;
+  // API returns { booking: {...}, payments: [...], invoices: [...], ... }
+  const b = booking.booking;
   return (
     <div className="max-w-5xl">
       <div className="flex items-center gap-3 mb-6 flex-wrap">
