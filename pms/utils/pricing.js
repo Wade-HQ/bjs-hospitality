@@ -17,6 +17,14 @@ function calculateBookingPrice(db, {
   children,
   meal_package_id,
 }) {
+  // Input validation
+  const adultsInt = parseInt(adults);
+  const childrenInt = parseInt(children || 0);
+  const nightsInt = parseInt(nights);
+  if (!Number.isFinite(adultsInt) || adultsInt < 1) throw new Error('adults must be a positive integer');
+  if (!Number.isFinite(childrenInt) || childrenInt < 0) throw new Error('children must be a non-negative integer');
+  if (!Number.isFinite(nightsInt) || nightsInt < 1) throw new Error('nights must be a positive integer');
+
   // 1. Base rate
   const rtr = db.prepare(`
     SELECT rate_per_person, single_supplement_multiplier, children_pct
@@ -24,9 +32,10 @@ function calculateBookingPrice(db, {
     WHERE room_type_id = ? AND region = ?
   `).get(room_type_id, region || 'international');
 
-  const ratePerPerson = rtr ? rtr.rate_per_person : 0;
-  const singleMultiplier = rtr ? rtr.single_supplement_multiplier : 1.5;
-  const childrenPct = rtr ? rtr.children_pct : 50;
+  if (!rtr) throw new Error(`No rate found for room_type_id=${room_type_id} region=${region || 'international'}`);
+  const ratePerPerson = rtr.rate_per_person;
+  const singleMultiplier = rtr.single_supplement_multiplier;
+  const childrenPct = rtr.children_pct;
 
   // 2. Seasonal adjustment (first match on check_in date)
   const season = db.prepare(`
