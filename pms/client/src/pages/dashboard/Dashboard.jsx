@@ -150,12 +150,14 @@ export default function Dashboard() {
           value={arrivals.length}
           sub={`${arrivals.filter(a => a.status === 'confirmed').length} confirmed`}
           color="teal"
+          onClick={() => navigate(`/dashboard/bookings?check_in=${today}`)}
         />
         <StatCard
           title="Today's Departures"
           value={departures.length}
           sub="Checking out today"
           color="primary"
+          onClick={() => navigate(`/dashboard/bookings?check_out=${today}`)}
         />
         <StatCard
           title="Occupancy"
