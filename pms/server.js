@@ -47,8 +47,7 @@ app.use('/api/notifications',require('./routes/notifications'));
 app.use('/api/reports',      require('./routes/reports'));
 app.use('/api/ical',         require('./routes/ical'));
 app.use('/api/settings',     require('./routes/settings'));
-app.use('/api/meal-packages',         require('./routes/meal-packages'));
-app.use('/api/seasonal-adjustments',  require('./routes/seasonal-adjustments'));
+app.use('/api/meal-packages', require('./routes/meal-packages'));
 
 // ─── GET /api/health ─────────────────────────────────────────────────────────
 
