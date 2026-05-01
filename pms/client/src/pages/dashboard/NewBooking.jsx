@@ -101,6 +101,24 @@ export default function NewBooking() {
               </select>
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Region / Rate</label>
+              <select value={form.region} onChange={e => setField('region', e.target.value)} required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <option value="international">International</option>
+                <option value="sadc">SADC</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Meal Package</label>
+              <select value={form.meal_package_id} onChange={e => setField('meal_package_id', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <option value="">Room Only (no meals)</option>
+                {mealPackages.map(mp => (
+                  <option key={mp.id} value={mp.id}>{mp.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Adults</label>
               <input type="number" min={1} value={form.adults} onChange={e => setField('adults', parseInt(e.target.value))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
