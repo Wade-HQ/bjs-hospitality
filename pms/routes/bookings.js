@@ -141,12 +141,17 @@ router.get('/', requireAuth, (req, res) => {
            b.adults, b.children, b.status, b.payment_status,
            b.total_amount, b.currency, b.room_rate,
            b.commission_amount, b.net_to_property,
-           b.room_id, b.room_type_id,
+           b.room_id, b.room_type_id, b.guest_id,
+           b.channel_booking_ref, b.special_requests,
            b.created_at, b.updated_at,
            g.first_name, g.last_name,
            (g.first_name || ' ' || g.last_name) as guest_name,
            g.email as guest_email, g.phone as guest_phone, g.vip_flag,
-           r.room_number, rt.name as room_type_name
+           r.room_number, r.name as room_name,
+           rt.name as room_type_name,
+           (b.total_amount - COALESCE((
+             SELECT SUM(bp.amount) FROM booking_payments bp WHERE bp.booking_id = b.id
+           ), 0)) as balance_due
     FROM bookings b
     LEFT JOIN guests g ON g.id = b.guest_id
     LEFT JOIN rooms r ON r.id = b.room_id
