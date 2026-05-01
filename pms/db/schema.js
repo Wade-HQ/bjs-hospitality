@@ -334,6 +334,15 @@ async function runMigrations(db) {
     try { db.exec(sql); } catch (_) { /* column already exists */ }
   }
 
+  const bookingRateMigrations = [
+    `ALTER TABLE bookings ADD COLUMN region TEXT CHECK(region IN ('international', 'sadc'))`,
+    `ALTER TABLE bookings ADD COLUMN meal_package_id INTEGER REFERENCES meal_packages(id)`,
+    `ALTER TABLE bookings ADD COLUMN meal_total REAL NOT NULL DEFAULT 0`,
+  ];
+  for (const sql of bookingRateMigrations) {
+    try { db.exec(sql); } catch (_) { /* column already exists */ }
+  }
+
   // One-time seed flag — prevents re-inserting default room types after they've been deleted
   try { db.exec(`ALTER TABLE properties ADD COLUMN room_types_seeded INTEGER DEFAULT 0`); } catch (_) {}
   // Mark existing properties as already seeded (the column was just added with DEFAULT 0,
