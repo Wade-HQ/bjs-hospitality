@@ -376,12 +376,12 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
 
   const newBookingId = bookingResult.lastInsertRowid;
 
-  // Mark room as occupied if it has specific room_id and check-in is today
-  if (room_id) {
+  // Mark room as occupied if check-in is today
+  if (resolvedRoomId) {
     const todayStr = new Date().toISOString().slice(0, 10);
     if (check_in === todayStr) {
       db.prepare(`UPDATE rooms SET status = 'occupied' WHERE id = ? AND property_id = ?`)
-        .run(room_id, PROPERTY_ID());
+        .run(resolvedRoomId, PROPERTY_ID());
     }
   }
 
