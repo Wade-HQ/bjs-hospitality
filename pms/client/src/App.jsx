@@ -16,7 +16,6 @@ import BookingDetail from './pages/dashboard/BookingDetail.jsx';
 import Guests from './pages/dashboard/Guests.jsx';
 import GuestProfile from './pages/dashboard/GuestProfile.jsx';
 import Invoices from './pages/dashboard/Invoices.jsx';
-import Rates from './pages/dashboard/Rates.jsx';
 import Availability from './pages/dashboard/Availability.jsx';
 import Reports from './pages/dashboard/Reports.jsx';
 import Settings from './pages/dashboard/Settings.jsx';
