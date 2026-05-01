@@ -343,6 +343,23 @@ async function runMigrations(db) {
     try { db.exec(sql); } catch (_) { /* column already exists */ }
   }
 
+  // Seed room_type_rates from existing room_types for any room type that doesn't have rates yet
+  const roomTypesWithoutRates = db.prepare(`
+    SELECT id, base_rate FROM room_types
+    WHERE id NOT IN (SELECT DISTINCT room_type_id FROM room_type_rates)
+  `).all();
+  if (roomTypesWithoutRates.length > 0) {
+    const insertRate = db.prepare(`
+      INSERT OR IGNORE INTO room_type_rates (room_type_id, region, rate_per_person)
+      VALUES (?, ?, ?)
+    `);
+    for (const rt of roomTypesWithoutRates) {
+      insertRate.run(rt.id, 'international', rt.base_rate || 0);
+      insertRate.run(rt.id, 'sadc', rt.base_rate || 0);
+    }
+    console.log(`[seed] Seeded room_type_rates for ${roomTypesWithoutRates.length} room types`);
+  }
+
   // One-time seed flag — prevents re-inserting default room types after they've been deleted
   try { db.exec(`ALTER TABLE properties ADD COLUMN room_types_seeded INTEGER DEFAULT 0`); } catch (_) {}
   // Mark existing properties as already seeded (the column was just added with DEFAULT 0,
