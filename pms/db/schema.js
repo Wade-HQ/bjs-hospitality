@@ -442,20 +442,20 @@ async function runMigrations(db) {
     },
   ];
 
-  const insertMemRoomType = db.prepare(`
-    INSERT INTO room_types (property_id, name, description, max_occupancy, base_rate, currency, amenities_json, image_urls_json)
-    VALUES (2, ?, ?, ?, ?, 'ZAR', ?, ?)
-  `);
-  const findMemRoomType = db.prepare('SELECT id FROM room_types WHERE property_id = 2 AND name = ?');
-
-  for (const rt of MEM_ROOM_TYPES) {
-    if (!findMemRoomType.get(rt.name)) {
+  if (needsMemS) {
+    const insertMemRoomType = db.prepare(`
+      INSERT INTO room_types (property_id, name, description, max_occupancy, base_rate, currency, amenities_json, image_urls_json)
+      VALUES (2, ?, ?, ?, ?, 'ZAR', ?, ?)
+    `);
+    for (const rt of MEM_ROOM_TYPES) {
       insertMemRoomType.run(
         rt.name, rt.description, rt.max_occupancy, rt.base_rate,
         JSON.stringify(rt.amenities), JSON.stringify(rt.images)
       );
       console.log(`[seed] Membene room type added: ${rt.name}`);
     }
+    db.prepare('UPDATE properties SET room_types_seeded=1 WHERE id=2').run();
+    console.log('[seed] Membene room types seeded — will not re-seed on restart');
   }
 
   // Update Membene property details
