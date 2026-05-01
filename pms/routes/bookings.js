@@ -547,11 +547,29 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
       try { return JSON.parse(src || '[]'); } catch { return []; }
     })();
     const extrasTotal = extras.reduce((sum, e) => sum + ((e.quantity || 1) * (e.unit_price || 0)), 0);
-    const disc = discount_amount !== undefined ? parseFloat(discount_amount) : existing.discount_amount;
-    subtotal = (existing.room_rate * nights) + extrasTotal - disc;
-    const taxRate = existing.tax_rate || 0;
-    taxAmount = subtotal * (taxRate / 100);
-    totalAmount = subtotal + taxAmount;
+    const disc = discount_amount !== undefined ? parseFloat(discount_amount) : (existing.discount_amount || 0);
+
+    try {
+      const pricing = calculateBookingPrice(db, {
+        property_id: PROPERTY_ID(),
+        room_type_id: existing.room_type_id,
+        region: existing.region || 'international',
+        check_in: newCheckIn,
+        check_out: newCheckOut,
+        nights,
+        adults: parseInt(adults !== undefined ? adults : existing.adults),
+        children: parseInt(children !== undefined ? children : existing.children),
+        meal_package_id: existing.meal_package_id,
+      });
+      subtotal = pricing.accommodation_subtotal + pricing.meal_total + extrasTotal - disc;
+      const taxRate = existing.tax_rate || 0;
+      taxAmount = subtotal * (taxRate / 100);
+      totalAmount = subtotal + taxAmount;
+    } catch (e) {
+      subtotal = existing.subtotal;
+      taxAmount = existing.tax_amount;
+      totalAmount = existing.total_amount;
+    }
   }
 
   const oldValues = JSON.stringify({
