@@ -370,14 +370,36 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
   // Get property for defaults
   const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(PROPERTY_ID());
 
-  // Calculate financials
-  const roomRate = getRoomRate(db, resolvedRoomTypeId, check_in, check_out, nights, source);
-  const extras = (() => { try { return JSON.parse(extras_json || '[]'); } catch { return []; } })();
-  const extrasTotal = extras.reduce((sum, e) => sum + ((e.quantity || 1) * (e.unit_price || 0)), 0);
-  const subtotal = (roomRate * nights) + extrasTotal - parseFloat(discount_amount || 0);
-  const taxRate = property.tax_rate || 0;
-  const taxAmount = subtotal * (taxRate / 100);
-  const totalAmount = subtotal + taxAmount;
+  // Calculate financials using the pricing utility
+  let roomRate, mealTotal, subtotal, taxAmount, totalAmount;
+  try {
+    const pricing = calculateBookingPrice(db, {
+      property_id: PROPERTY_ID(),
+      room_type_id: resolvedRoomTypeId,
+      region: region || 'international',
+      check_in,
+      check_out,
+      nights,
+      adults: parseInt(adults),
+      children: parseInt(children || 0),
+      meal_package_id: meal_package_id ? parseInt(meal_package_id) : null,
+    });
+    roomRate = pricing.adjusted_rate;
+    mealTotal = pricing.meal_total;
+    subtotal = pricing.subtotal;
+    taxAmount = pricing.tax_amount;
+    totalAmount = pricing.total_amount;
+  } catch (e) {
+    // Fall back to base_rate if no room_type_rates row exists yet
+    const rt = db.prepare('SELECT base_rate FROM room_types WHERE id = ? AND property_id = ?')
+      .get(resolvedRoomTypeId, PROPERTY_ID());
+    roomRate = rt ? rt.base_rate : 0;
+    mealTotal = 0;
+    subtotal = roomRate * nights;
+    const taxRate = property.tax_rate || 0;
+    taxAmount = subtotal * (taxRate / 100);
+    totalAmount = subtotal + taxAmount;
+  }
 
   const effectiveCommissionRate = commission_rate !== undefined
     ? parseFloat(commission_rate)
