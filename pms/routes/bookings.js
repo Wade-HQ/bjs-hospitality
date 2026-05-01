@@ -173,6 +173,39 @@ router.get('/', requireAuth, (req, res) => {
   });
 });
 
+// GET /api/bookings/price-preview
+router.get('/price-preview', requireAuth, (req, res) => {
+  const db = getDb();
+  const { room_type_id, region, check_in, check_out, adults, children, meal_package_id } = req.query;
+
+  const empty = { adjusted_rate: 0, accommodation_subtotal: 0, meal_total: 0, subtotal: 0, tax_amount: 0, total_amount: 0, season_name: null };
+
+  if (!room_type_id || !check_in || !check_out || !adults) return res.json(empty);
+
+  const ciDate = new Date(check_in);
+  const coDate = new Date(check_out);
+  if (isNaN(ciDate) || isNaN(coDate) || coDate <= ciDate) return res.json(empty);
+
+  const nights = Math.round((coDate - ciDate) / (1000 * 60 * 60 * 24));
+
+  try {
+    const result = calculateBookingPrice(db, {
+      property_id: PROPERTY_ID(),
+      room_type_id: parseInt(room_type_id),
+      region: region || 'international',
+      check_in,
+      check_out,
+      nights,
+      adults: parseInt(adults) || 1,
+      children: parseInt(children) || 0,
+      meal_package_id: meal_package_id ? parseInt(meal_package_id) : null,
+    });
+    return res.json(result);
+  } catch (e) {
+    return res.json(empty);
+  }
+});
+
 // GET /api/bookings/:id
 router.get('/:id', requireAuth, (req, res) => {
   const db = getDb();
