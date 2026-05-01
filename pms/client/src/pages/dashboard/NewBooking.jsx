@@ -32,9 +32,11 @@ export default function NewBooking() {
     e.preventDefault();
     setSaving(true);
     try {
-      const r = await api.post('/api/bookings', form);
+      // Flatten guest fields to root level — backend expects them at root, not nested
+      const { guest, ...rest } = form;
+      const r = await api.post('/api/bookings', { ...rest, ...guest });
       addToast('Booking created');
-      navigate(`/dashboard/bookings/${r.data.id}`);
+      navigate(`/dashboard/bookings/${r.data.booking.id}`);
     } catch (e) {
       addToast(e.response?.data?.error || 'Error creating booking', 'error');
       setSaving(false);
