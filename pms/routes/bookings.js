@@ -390,15 +390,8 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
     taxAmount = pricing.tax_amount;
     totalAmount = pricing.total_amount;
   } catch (e) {
-    // Fall back to base_rate if no room_type_rates row exists yet
-    const rt = db.prepare('SELECT base_rate FROM room_types WHERE id = ? AND property_id = ?')
-      .get(resolvedRoomTypeId, PROPERTY_ID());
-    roomRate = rt ? rt.base_rate : 0;
-    mealTotal = 0;
-    subtotal = roomRate * nights;
-    const taxRate = property.tax_rate || 0;
-    taxAmount = subtotal * (taxRate / 100);
-    totalAmount = subtotal + taxAmount;
+    console.error('[bookings] pricing error:', e.message);
+    return res.status(422).json({ error: `Pricing error: ${e.message}` });
   }
 
   const effectiveCommissionRate = commission_rate !== undefined
