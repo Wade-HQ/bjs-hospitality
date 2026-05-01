@@ -8,7 +8,7 @@ import Table from '../../components/Table.jsx';
 
 const STATUS_OPTIONS = ['', 'provisional', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'no_show'];
 const PAYMENT_OPTIONS = ['', 'unpaid', 'deposit_paid', 'fully_paid'];
-const SOURCE_OPTIONS = ['', 'direct', 'ota_internal', 'phone', 'email', 'walk_in', 'agent'];
+const SOURCE_OPTIONS = ['', 'direct', 'ota_internal', 'booking_com', 'airbnb', 'expedia', 'google'];
 
 export default function Bookings() {
   const navigate = useNavigate();
