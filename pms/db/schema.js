@@ -274,6 +274,47 @@ async function runMigrations(db) {
       new_value TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS room_type_rates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      room_type_id INTEGER NOT NULL REFERENCES room_types(id) ON DELETE CASCADE,
+      region TEXT NOT NULL CHECK(region IN ('international', 'sadc')),
+      rate_per_person REAL NOT NULL DEFAULT 0,
+      single_supplement_multiplier REAL NOT NULL DEFAULT 1.5,
+      children_pct INTEGER NOT NULL DEFAULT 50,
+      is_online INTEGER NOT NULL DEFAULT 1,
+      is_sto INTEGER NOT NULL DEFAULT 1,
+      is_agent INTEGER NOT NULL DEFAULT 1,
+      is_ota INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(room_type_id, region)
+    );
+
+    CREATE TABLE IF NOT EXISTS meal_packages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      property_id INTEGER NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      price_per_person REAL NOT NULL DEFAULT 0,
+      is_online INTEGER NOT NULL DEFAULT 1,
+      is_sto INTEGER NOT NULL DEFAULT 1,
+      is_agent INTEGER NOT NULL DEFAULT 1,
+      is_ota INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS seasonal_adjustments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      property_id INTEGER NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      pct_change REAL NOT NULL DEFAULT 0,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // ── Column migrations (idempotent — SQLite throws if column already exists) ──
