@@ -29,6 +29,25 @@ export default function NewBooking() {
     api.get('/api/rooms', { params: { room_type_id: form.room_type_id } }).then(r => setRooms(r.data?.rooms || []));
   }, [form.room_type_id]);
 
+  useEffect(() => {
+    const { room_type_id, region, check_in, check_out, adults, children, meal_package_id } = form;
+    if (!room_type_id || !check_in || !check_out || !adults) { setPreview(null); return; }
+    const ci = new Date(check_in), co = new Date(check_out);
+    if (co <= ci) { setPreview(null); return; }
+
+    const timer = setTimeout(async () => {
+      setPreviewLoading(true);
+      try {
+        const params = new URLSearchParams({ room_type_id, region, check_in, check_out, adults, children: children || 0 });
+        if (meal_package_id) params.set('meal_package_id', meal_package_id);
+        const r = await api.get(`/api/bookings/price-preview?${params}`);
+        setPreview(r.data);
+      } catch { setPreview(null); }
+      finally { setPreviewLoading(false); }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [form.room_type_id, form.region, form.check_in, form.check_out, form.adults, form.children, form.meal_package_id]);
+
   const setField = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const setGuest = (k, v) => setForm(p => ({ ...p, guest: { ...p.guest, [k]: v } }));
 
