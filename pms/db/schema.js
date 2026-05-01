@@ -467,7 +467,7 @@ async function runMigrations(db) {
         JSON.stringify(rt.amenities), JSON.stringify(rt.images)
       );
       console.log(`[seed] Room type added: ${rt.name}`);
-      const rtId = db.prepare('SELECT id FROM room_types WHERE property_id=1 AND name=? ORDER BY id DESC LIMIT 1').get(rt.name)?.id;
+      const rtId = db.prepare('SELECT last_insert_rowid() as id').get()?.id;
       if (rtId) {
         db.prepare('INSERT OR IGNORE INTO room_type_rates (room_type_id, region, rate_per_person) VALUES (?, ?, ?)').run(rtId, 'international', rt.base_rate || 0);
         db.prepare('INSERT OR IGNORE INTO room_type_rates (room_type_id, region, rate_per_person) VALUES (?, ?, ?)').run(rtId, 'sadc', rt.base_rate || 0);
