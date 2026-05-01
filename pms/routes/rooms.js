@@ -18,7 +18,7 @@ router.get('/', requireAuth, (req, res) => {
            r.show_online, r.description, r.amenities_json, r.wheelchair_accessible, r.bedrooms, r.created_at,
            rt.id as room_type_id, rt.name as room_type_name,
            COALESCE(r.max_occupancy, rt.max_occupancy) as max_occupancy,
-           rt.base_rate, rt.amenities_json, rt.image_urls_json,
+           rt.base_rate, rt.amenities_json as room_type_amenities_json, rt.image_urls_json,
            COALESCE(rt.currency, p.currency) as currency
     FROM rooms r
     LEFT JOIN room_types rt ON rt.id = r.room_type_id
