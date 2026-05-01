@@ -99,11 +99,23 @@ export default function NewBooking() {
               </div>
             ))}
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Region / Rate</label>
+              <select value={form.region} onChange={e => setField('region', e.target.value)} required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <option value="international">International</option>
+                <option value="sadc">SADC</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Room Type</label>
               <select value={form.room_type_id} onChange={e => setField('room_type_id', e.target.value)} required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                 <option value="">Select room type</option>
-                {roomTypes.map(rt => <option key={rt.id} value={rt.id}>{rt.name} — {rt.currency} {rt.base_rate}/night</option>)}
+                {roomTypes.map(rt => {
+                  const regionRate = roomTypeRates[rt.id]?.[form.region]?.rate_per_person;
+                  const rateStr = regionRate != null ? ` — ${rt.currency || 'ZAR'} ${Number(regionRate).toLocaleString()}/pp` : '';
+                  return <option key={rt.id} value={rt.id}>{rt.name}{rateStr}</option>;
+                })}
               </select>
             </div>
             <div>
@@ -112,14 +124,6 @@ export default function NewBooking() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                 <option value="">Auto-assign</option>
                 {rooms.map(r => <option key={r.id} value={r.id}>Room {r.room_number} (Floor {r.floor||'?'})</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Region / Rate</label>
-              <select value={form.region} onChange={e => setField('region', e.target.value)} required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                <option value="international">International</option>
-                <option value="sadc">SADC</option>
               </select>
             </div>
             <div>
