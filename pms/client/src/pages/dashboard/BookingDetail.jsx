@@ -35,9 +35,10 @@ export default function BookingDetail() {
   const downloadInvoice = async () => {
     try {
       const r = await api.post(`/api/invoices`, { booking_id: id, issued_to: 'guest' });
-      const pdf = await api.get(`/api/invoices/${r.data.id}/pdf`, { responseType: 'blob' });
+      const inv = r.data.invoice;
+      const pdf = await api.get(`/api/invoices/${inv.id}/pdf`, { responseType: 'blob' });
       const url = URL.createObjectURL(pdf.data);
-      const a = document.createElement('a'); a.href = url; a.download = `invoice-${r.data.invoice_number}.pdf`; a.click();
+      const a = document.createElement('a'); a.href = url; a.download = `invoice-${inv.invoice_number}.pdf`; a.click();
     } catch (e) { addToast('Failed to generate invoice', 'error'); }
   };
 
