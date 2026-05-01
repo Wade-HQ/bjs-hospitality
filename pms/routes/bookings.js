@@ -364,7 +364,7 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     bookingRef, source, PROPERTY_ID(),
-    room_id || null, resolvedRoomTypeId || null, resolvedGuestId,
+    resolvedRoomId || null, resolvedRoomTypeId || null, resolvedGuestId,
     check_in, check_out, nights, parseInt(adults), parseInt(children),
     roomRate, extras_json || '[]',
     subtotal, taxAmount, taxRate, parseFloat(discount_amount || 0), totalAmount,
