@@ -7,6 +7,7 @@ export default function NewBooking() {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const [roomTypes, setRoomTypes] = useState([]);
+  const [roomTypeRates, setRoomTypeRates] = useState({});
   const [rooms, setRooms] = useState([]);
   const [saving, setSaving] = useState(false);
   const [mealPackages, setMealPackages] = useState([]);
@@ -20,8 +21,21 @@ export default function NewBooking() {
   });
 
   useEffect(() => {
-    api.get('/api/room-types').then(r => setRoomTypes(r.data?.room_types || []));
-    api.get('/api/meal-packages').then(r => setMealPackages(r.data?.meal_packages || []));
+    Promise.all([
+      api.get('/api/room-types'),
+      api.get('/api/meal-packages'),
+    ]).then(([rtRes, mpRes]) => {
+      const types = rtRes.data?.room_types || [];
+      setRoomTypes(types);
+      setMealPackages(mpRes.data?.meal_packages || []);
+      Promise.all(
+        types.map(rt => api.get(`/api/room-types/${rt.id}/rates`).then(r => ({ id: rt.id, rates: r.data.rates })))
+      ).then(results => {
+        const map = {};
+        results.forEach(({ id, rates }) => { map[id] = rates; });
+        setRoomTypeRates(map);
+      }).catch(() => {});
+    });
   }, []);
 
   useEffect(() => {
