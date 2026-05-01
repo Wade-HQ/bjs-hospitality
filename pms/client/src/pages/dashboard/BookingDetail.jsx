@@ -88,7 +88,8 @@ export default function BookingDetail() {
           <dl className="space-y-1 text-sm">
             {[
               ['Rate/night', `${b.currency} ${Number(b.room_rate).toLocaleString()}`],
-              ['Subtotal', `${b.currency} ${Number(b.subtotal).toLocaleString()}`],
+              ['Subtotal (acc.)', `${b.currency} ${Number(b.subtotal - (b.meal_total || 0)).toLocaleString()}`],
+              ...(b.meal_total > 0 ? [['Meals', `${b.currency} ${Number(b.meal_total).toLocaleString()}`]] : []),
               ['Tax', `${b.currency} ${Number(b.tax_amount).toLocaleString()}`],
               ['Total', `${b.currency} ${Number(b.total_amount).toLocaleString()}`],
             ].map(([k,v]) => (
