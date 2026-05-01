@@ -273,7 +273,9 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
     discount_amount = 0,
     commission_rate,
     // Payment (optional)
-    payment_amount, payment_method, payment_date, payment_reference, payment_notes
+    payment_amount, payment_method, payment_date, payment_reference, payment_notes,
+    region = 'international',
+    meal_package_id,
   } = req.body;
 
   if (!check_in || !check_out) {
