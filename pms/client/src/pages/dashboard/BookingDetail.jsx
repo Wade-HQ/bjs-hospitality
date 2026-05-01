@@ -61,7 +61,15 @@ export default function BookingDetail() {
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h2 className="font-semibold text-gray-600 text-sm mb-3 uppercase tracking-wide">Stay</h2>
           <dl className="space-y-2 text-sm">
-            {[['Room', b.room_number ? `Room ${b.room_number}` : '—'], ['Type', b.room_type_name],['Check-in', b.check_in],['Check-out', b.check_out],['Nights', b.nights],['Guests', `${b.adults}A ${b.children}C`]].map(([k,v]) => (
+            {[
+              ['Room', b.room_number ? `Room ${b.room_number}` : '—'],
+              ['Type', b.room_type_name],
+              ['Region', b.region ? (b.region === 'sadc' ? 'SADC' : 'International') : '—'],
+              ['Check-in', b.check_in],
+              ['Check-out', b.check_out],
+              ['Nights', b.nights],
+              ['Guests', `${b.adults}A ${b.children}C`],
+            ].map(([k,v]) => (
               <div key={k} className="flex justify-between"><dt className="text-gray-400">{k}</dt><dd className="font-medium">{v}</dd></div>
             ))}
           </dl>
