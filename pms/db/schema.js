@@ -8,6 +8,34 @@ async function runMigrations(db) {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
+  // ── Step 1: Backup old rates tables before dropping them ─────────────────────
+  // Only runs once — guard: check if a backup file already exists
+  const BACKUP_DIR = '/opt/bjs-hospitality';
+  const backupExists = fs.existsSync(BACKUP_DIR) &&
+    fs.readdirSync(BACKUP_DIR).some(f => f.startsWith('rates-backup-') && f.endsWith('.json'));
+
+  if (!backupExists) {
+    const OLD_RATE_TABLES = ['rates', 'room_type_rates', 'meal_packages', 'seasonal_adjustments', 'google_hotel_rates'];
+    const tablesPresent = OLD_RATE_TABLES.filter(t => {
+      const row = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(t);
+      return !!row;
+    });
+    if (tablesPresent.length > 0) {
+      const backup = {};
+      for (const t of tablesPresent) {
+        try { backup[t] = db.prepare(`SELECT * FROM ${t}`).all(); } catch (_) { backup[t] = []; }
+      }
+      try {
+        if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+        const backupPath = path.join(BACKUP_DIR, `rates-backup-${Date.now()}.json`);
+        fs.writeFileSync(backupPath, JSON.stringify(backup, null, 2));
+        console.log(`[migration] Rates backup written to ${backupPath}`);
+      } catch (e) {
+        console.warn(`[migration] Could not write rates backup: ${e.message}`);
+      }
+    }
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS properties (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
