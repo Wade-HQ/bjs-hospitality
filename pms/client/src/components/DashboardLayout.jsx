@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { label: 'Invoices', path: '/dashboard/invoices', icon: '🧾' },
   { label: 'Availability', path: '/dashboard/availability', icon: '🗓' },
   { label: 'Reports', path: '/dashboard/reports', icon: '📊' },
+  { label: 'Rates', path: '/dashboard/rates', icon: '💲' },
   { label: 'Settings', path: '/dashboard/settings', icon: '⚙' },
 ];
 
