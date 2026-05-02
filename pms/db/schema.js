@@ -514,7 +514,7 @@ async function runMigrations(db) {
     }
   }
 
-  // ── Step 5: Drop old rates tables (after seeding) ─────────────────────────
+  // ── Step 4: Drop old rates tables (after seeding) ─────────────────────────
   // Null out meal_package_id FK before dropping meal_packages to avoid orphaned refs
   try { db.exec(`UPDATE bookings SET meal_package_id = NULL`); } catch (_) {}
 
