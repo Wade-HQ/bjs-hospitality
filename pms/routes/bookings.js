@@ -426,14 +426,17 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
         nights,
         check_in,
       });
-      const property = db.prepare('SELECT tax_rate FROM properties WHERE id = ?').get(PROPERTY_ID());
-      const taxRate = property?.tax_rate || 0;
-      const taxAmt = Math.round(rpResult.total_for_stay * (taxRate / 100));
+      const propSettings = db.prepare('SELECT tax_rate, tax_inclusive FROM properties WHERE id = ?').get(PROPERTY_ID());
+      const taxRate = parseFloat(propSettings?.tax_rate ?? 0);
+      const taxInclusive = propSettings?.tax_inclusive ?? 1;
+      const taxAmt = taxInclusive
+        ? Math.round(rpResult.total_for_stay * taxRate / (100 + taxRate))
+        : Math.round(rpResult.total_for_stay * taxRate / 100);
       roomRate = rpResult.total_per_night;
       mealTotal = rpResult.meal_total_per_night * nights;
       subtotal = rpResult.total_for_stay;
       taxAmount = taxAmt;
-      totalAmount = rpResult.total_for_stay + taxAmt;
+      totalAmount = taxInclusive ? rpResult.total_for_stay : rpResult.total_for_stay + taxAmt;
       seasonName = rpResult.season_applied?.name || null;
     } catch (e) {
       console.error('[bookings] rate plan pricing error:', e.message);
