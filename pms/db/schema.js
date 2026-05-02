@@ -1,5 +1,7 @@
 'use strict';
 const bcrypt = require('bcrypt');
+const fs = require('fs');
+const path = require('path');
 
 async function runMigrations(db) {
   // Enable WAL mode for concurrent access
