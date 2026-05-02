@@ -525,7 +525,7 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
   } = req.body;
 
   if (guest_id !== undefined) {
-    const guestExists = db.prepare('SELECT id FROM guests WHERE id = ?').get(guest_id);
+    const guestExists = db.prepare('SELECT id FROM guests WHERE id = ? AND property_id = ?').get(guest_id, PROPERTY_ID());
     if (!guestExists) return res.status(400).json({ error: 'Guest not found' });
   }
   if (region !== undefined && !['international', 'sadc'].includes(region)) {
