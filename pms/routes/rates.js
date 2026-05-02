@@ -177,7 +177,7 @@ router.put('/meals/:id', requireAuth, requireRole(...WRITE_ROLES), (req, res) =>
   ).get(req.params.id, pid);
   if (!existing) return res.status(404).json({ error: 'Meal component not found' });
 
-  const { name, cost_per_person, description, active } = req.body;
+  const { name, cost_per_person, notes, active } = req.body;
 
   if (name !== undefined && !name.trim()) {
     return res.status(400).json({ error: 'name cannot be empty' });
@@ -194,13 +194,13 @@ router.put('/meals/:id', requireAuth, requireRole(...WRITE_ROLES), (req, res) =>
     UPDATE meal_components SET
       name           = COALESCE(?, name),
       cost_per_person = COALESCE(?, cost_per_person),
-      description    = COALESCE(?, description),
+      notes          = COALESCE(?, notes),
       active         = COALESCE(?, active)
     WHERE id = ? AND property_id = ?
   `).run(
     name            ? name.trim() : null,
     cost_per_person !== undefined ? parseFloat(cost_per_person) : null,
-    description     !== undefined ? description : null,
+    notes           !== undefined ? notes : null,
     active          !== undefined ? (active ? 1 : 0) : null,
     req.params.id, pid
   );
