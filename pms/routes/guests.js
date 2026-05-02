@@ -217,4 +217,27 @@ router.delete('/:id/documents/:doc_id', requireAuth, requireRole('owner','hotel_
   return res.json({ ok: true });
 });
 
+// GET /api/guests/:id/documents/:doc_id/download
+router.get('/:id/documents/:doc_id/download', requireAuth, (req, res) => {
+  const db = getDb();
+  const doc = db.prepare(`
+    SELECT gd.* FROM guest_documents gd
+    JOIN guests g ON g.id = gd.guest_id
+    WHERE gd.id = ? AND gd.guest_id = ?
+      AND (g.property_id = ? OR EXISTS (
+        SELECT 1 FROM bookings b WHERE b.guest_id = g.id AND b.property_id = ?
+      ))
+  `).get(req.params.doc_id, req.params.id, PROPERTY_ID(), PROPERTY_ID());
+
+  if (!doc) return res.status(404).json({ error: 'Document not found' });
+
+  const fs = require('fs');
+  if (!fs.existsSync(doc.file_path)) {
+    return res.status(404).json({ error: 'File not found on disk' });
+  }
+
+  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(doc.file_name)}"`);
+  res.sendFile(doc.file_path);
+});
+
 module.exports = router;
