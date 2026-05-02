@@ -252,7 +252,7 @@ router.post('/plans', requireAuth, requireRole(...WRITE_ROLES), (req, res) => {
   const pid = PROPERTY_ID();
   const {
     room_type_id, name, meal_components_json = '[]',
-    visible_on_website = 0, active = 1, description
+    visible_on_website = 0, visible_on_backoffice = 1, active = 1, description
   } = req.body;
 
   if (!name || !name.trim()) {
