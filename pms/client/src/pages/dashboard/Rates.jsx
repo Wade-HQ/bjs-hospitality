@@ -689,7 +689,7 @@ function PlansTab() {
                     <tr key={p.id} className={`hover:bg-gray-50 ${!p.active ? 'opacity-50' : ''}`}>
                       <td className="px-4 py-3 font-medium text-primary">{p.name}</td>
                       <td className="px-4 py-3 text-gray-600 text-xs max-w-[200px]">{getMealNames(p.meal_components_json)}</td>
-                      <td className="px-4 py-3 font-medium">{calc ? fmt(calc.total_per_night) : '—'}</td>
+                      <td className="px-4 py-3 font-medium">{calc ? fmt(calc.total_per_night, property?.currency) : '—'}</td>
                       <td className="px-4 py-3">{p.visible_on_website ? '✓' : '—'}</td>
                       <td className="px-4 py-3">{p.visible_on_backoffice ? '✓' : '—'}</td>
                       <td className="px-4 py-3">
