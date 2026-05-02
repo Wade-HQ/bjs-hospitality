@@ -378,7 +378,7 @@ router.post('/seasons', requireAuth, requireRole(...WRITE_ROLES), (req, res) => 
   const {
     name, start_date, end_date, uplift_percent = 0,
     applies_to_sadc = 1, applies_to_international = 1, applies_to_channels = 1,
-    active = 1
+    active = 1, notes
   } = req.body;
 
   if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });
@@ -387,12 +387,12 @@ router.post('/seasons', requireAuth, requireRole(...WRITE_ROLES), (req, res) => 
 
   const result = db.prepare(`
     INSERT INTO seasons (property_id, name, start_date, end_date, uplift_percent,
-      applies_to_sadc, applies_to_international, applies_to_channels, active)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      applies_to_sadc, applies_to_international, applies_to_channels, active, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     pid, name.trim(), start_date, end_date, parseFloat(uplift_percent),
     applies_to_sadc ? 1 : 0, applies_to_international ? 1 : 0, applies_to_channels ? 1 : 0,
-    active ? 1 : 0
+    active ? 1 : 0, notes || null
   );
 
   const season = db.prepare('SELECT * FROM seasons WHERE id = ?').get(result.lastInsertRowid);
