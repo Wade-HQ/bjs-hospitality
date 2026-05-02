@@ -554,7 +554,9 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
   let totalAmount = existing.total_amount;
   let nights = existing.nights;
 
-  if (check_in || check_out || discount_amount !== undefined || extras_json !== undefined) {
+  if (check_in || check_out || discount_amount !== undefined || extras_json !== undefined ||
+      region !== undefined || meal_package_id !== undefined ||
+      adults !== undefined || children !== undefined) {
     const ciDate = new Date(newCheckIn);
     const coDate = new Date(newCheckOut);
     nights = Math.round((coDate - ciDate) / (1000 * 60 * 60 * 24));
