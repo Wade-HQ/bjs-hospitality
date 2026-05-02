@@ -186,25 +186,6 @@ async function runMigrations(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- Legacy rate table (date-range / channel model). Retained for compatibility.
-    -- For per-person-sharing pricing, use room_type_rates instead.
-    CREATE TABLE IF NOT EXISTS rates (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      property_id INTEGER NOT NULL REFERENCES properties(id),
-      room_type_id INTEGER REFERENCES room_types(id),
-      name TEXT NOT NULL,
-      rate_per_night REAL NOT NULL,
-      currency TEXT DEFAULT 'USD',
-      valid_from TEXT,
-      valid_to TEXT,
-      min_nights INTEGER DEFAULT 1,
-      max_nights INTEGER,
-      days_of_week_json TEXT DEFAULT '[0,1,2,3,4,5,6]',
-      channel TEXT DEFAULT 'all' CHECK(channel IN ('all','direct','ota')),
-      active INTEGER DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
     CREATE TABLE IF NOT EXISTS availability_blocks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       property_id INTEGER NOT NULL REFERENCES properties(id),
