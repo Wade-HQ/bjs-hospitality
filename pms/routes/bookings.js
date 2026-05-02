@@ -202,16 +202,20 @@ router.get('/price-preview', requireAuth, (req, res) => {
         nights,
         check_in,
       });
-      const property = db.prepare('SELECT tax_rate FROM properties WHERE id = ?').get(PROPERTY_ID());
-      const taxRate = property?.tax_rate || 0;
-      const taxAmount = Math.round(result.total_for_stay * (taxRate / 100));
+      const property = db.prepare('SELECT tax_rate, tax_inclusive FROM properties WHERE id = ?').get(PROPERTY_ID());
+      const taxRate = parseFloat(property?.tax_rate ?? 0);
+      const taxInclusive = property?.tax_inclusive ?? 1;
+      const taxAmount = taxInclusive
+        ? Math.round(result.total_for_stay * taxRate / (100 + taxRate))
+        : Math.round(result.total_for_stay * taxRate / 100);
+      const totalAmount = taxInclusive ? result.total_for_stay : result.total_for_stay + taxAmount;
       return res.json({
         ...result,
         accommodation_subtotal: result.total_for_stay - result.meal_total_per_night * nights,
         meal_total: result.meal_total_per_night * nights,
         subtotal: result.total_for_stay,
         tax_amount: taxAmount,
-        total_amount: result.total_for_stay + taxAmount,
+        total_amount: totalAmount,
         season_name: result.season_applied?.name || null,
       });
     } catch (e) {
