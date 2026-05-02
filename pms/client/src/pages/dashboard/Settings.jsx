@@ -347,9 +347,12 @@ export default function Settings() {
       { k: 'contact_email', l: 'Contact Email' }, { k: 'contact_phone', l: 'Phone' },
     ]},
     { title: 'Finance', fields: [
-      { k: 'currency', l: 'Currency' }, { k: 'tax_label', l: 'Tax Label' },
-      { k: 'tax_rate', l: 'Tax Rate %', t: 'number' }, { k: 'invoice_prefix', l: 'Invoice Prefix' },
-      { k: 'vat_number', l: 'VAT / IVA Number' }, { k: 'payment_instructions', l: 'Payment Instructions' },
+      { k: 'currency', l: 'Currency', t: 'select', options: [['ZAR','ZAR – South African Rand'],['MZN','MZN – Mozambican Metical'],['USD','USD – US Dollar']] },
+      { k: 'tax_label', l: 'Tax Label (e.g. VAT, IVA)' },
+      { k: 'tax_rate', l: 'Tax Rate %', t: 'number' },
+      { k: 'tax_inclusive', l: 'Tax Mode', t: 'toggle', onLabel: 'Prices include tax', offLabel: 'Prices exclude tax' },
+      { k: 'invoice_prefix', l: 'Invoice Prefix' }, { k: 'vat_number', l: 'VAT / IVA Number' },
+      { k: 'payment_instructions', l: 'Payment Instructions' },
     ]},
     { title: 'Email (SMTP)', fields: [
       { k: 'smtp_host', l: 'SMTP Host' }, { k: 'smtp_port', l: 'Port', t: 'number' },
