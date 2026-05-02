@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/index.js';
 import { useToast } from '../../contexts/ToastContext.jsx';
+import { useProperty } from '../../contexts/PropertyContext.jsx';
 
 export default function NewBooking() {
   const navigate = useNavigate();
