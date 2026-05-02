@@ -306,8 +306,9 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
     commission_rate,
     // Payment (optional)
     payment_amount, payment_method, payment_date, payment_reference, payment_notes,
-    region = 'international',
+    region,
     meal_package_id,
+    rate_plan_id,
   } = req.body;
 
   if (!check_in || !check_out) {
@@ -316,7 +317,8 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
   if (!room_id && !room_type_id) {
     return res.status(400).json({ error: 'room_id or room_type_id is required' });
   }
-  if (region && !['international', 'sadc'].includes(region)) {
+  // region is required only when not using rate_plan_id
+  if (!rate_plan_id && region && !['international', 'sadc'].includes(region)) {
     return res.status(400).json({ error: 'region must be international or sadc' });
   }
   if (!guest_id && (!first_name || !last_name)) {
