@@ -59,12 +59,19 @@ export default function GuestProfile() {
 
   if (!guest) return <div className="p-12 text-center text-gray-400">Loading…</div>;
 
+  const ID_TYPES = [
+    { value: 'passport', label: 'Passport' },
+    { value: 'id_card', label: 'ID Card' },
+    { value: 'drivers_license', label: "Driver's License" },
+  ];
+
   const fields = [
     { k:'first_name', l:'First Name' },{ k:'last_name', l:'Last Name' },
     { k:'email', l:'Email', t:'email' },{ k:'phone', l:'Phone' },
     { k:'nationality', l:'Nationality' },{ k:'date_of_birth', l:'Date of Birth', t:'date' },
     { k:'address', l:'Address' },{ k:'city', l:'City' },{ k:'country', l:'Country' },
-    { k:'id_type', l:'ID Type' },{ k:'id_number', l:'ID Number' },{ k:'id_expiry', l:'ID Expiry', t:'date' },
+    { k:'id_type', l:'ID Type', t:'select', options: ID_TYPES },
+    { k:'id_number', l:'ID Number' },{ k:'id_expiry', l:'ID Expiry', t:'date' },
   ];
 
   return (
