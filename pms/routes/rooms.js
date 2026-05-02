@@ -16,7 +16,7 @@ router.get('/', requireAuth, (req, res) => {
     SELECT r.id, r.room_number, r.name, r.floor, r.status, r.notes,
            r.max_occupancy, r.max_adults, r.bed_config, r.bed_config_alt,
            r.show_online, r.description, r.amenities_json, r.wheelchair_accessible, r.bedrooms, r.created_at,
-           rt.id as room_type_id, rt.name as room_type_name,
+           COALESCE(rt.id, r.room_type_id) as room_type_id, rt.name as room_type_name,
            COALESCE(r.max_occupancy, rt.max_occupancy) as max_occupancy,
            rt.base_rate, rt.amenities_json as room_type_amenities_json, rt.image_urls_json,
            COALESCE(rt.currency, p.currency) as currency
