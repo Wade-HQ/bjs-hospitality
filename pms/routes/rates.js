@@ -278,11 +278,11 @@ router.post('/plans', requireAuth, requireRole(...WRITE_ROLES), (req, res) => {
   }
 
   const result = db.prepare(`
-    INSERT INTO rate_plans (property_id, room_type_id, name, meal_components_json, visible_on_website, active, description)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO rate_plans (property_id, room_type_id, name, meal_components_json, visible_on_website, visible_on_backoffice, active, description)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     pid, room_type_id, name.trim(), meal_components_json,
-    visible_on_website ? 1 : 0, active ? 1 : 0, description || null
+    visible_on_website ? 1 : 0, visible_on_backoffice ? 1 : 0, active ? 1 : 0, description || null
   );
 
   const plan = db.prepare('SELECT * FROM rate_plans WHERE id = ?').get(result.lastInsertRowid);
