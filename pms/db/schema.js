@@ -431,6 +431,10 @@ async function runMigrations(db) {
     `ALTER TABLE bookings ADD COLUMN meal_package_id INTEGER`,
     `ALTER TABLE bookings ADD COLUMN meal_total REAL NOT NULL DEFAULT 0`,
     `ALTER TABLE bookings ADD COLUMN rate_plan_id INTEGER REFERENCES rate_plans(id)`,
+    `ALTER TABLE bookings ADD COLUMN price_override_status TEXT CHECK(price_override_status IN ('pending','approved','rejected'))`,
+    `ALTER TABLE bookings ADD COLUMN price_override_amount REAL`,
+    `ALTER TABLE bookings ADD COLUMN price_override_reason TEXT`,
+    `ALTER TABLE bookings ADD COLUMN price_override_requested_by TEXT`,
   ];
   for (const sql of bookingRateMigrations) {
     try { db.exec(sql); } catch (_) { /* column already exists */ }
