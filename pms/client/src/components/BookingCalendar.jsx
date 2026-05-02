@@ -550,7 +550,7 @@ export default function BookingCalendar({ mode = 'booking', onNewBooking }) {
       {/* Booking Detail Sidebar */}
       {sidebarOpen && selectedBooking && (
         <div className="fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-black/30" onClick={() => setSidebarOpen(false)} />
+          <div className="absolute inset-0 bg-black/30" onClick={() => { setSidebarOpen(false); setSwapMode(false); }} />
           <div className="absolute right-0 top-0 bottom-0 w-96 bg-white shadow-2xl flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-primary text-white">
