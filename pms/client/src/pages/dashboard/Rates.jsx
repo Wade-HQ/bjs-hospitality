@@ -139,6 +139,18 @@ function BaseRatesTab() {
     }
   };
 
+  const applyIncrease = async () => {
+    try {
+      await api.post('/api/rates/base/bulk-increase', { pct: parseFloat(increasePct) });
+      addToast(`Rates increased by ${increasePct}%`);
+      setIncreaseModal(false);
+      setIncreasePct('');
+      load();
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Error applying increase', 'error');
+    }
+  };
+
   const exampleSadc = baseRates.length > 0 ? baseRates[0].rate_per_person : 3000;
   const exampleIntl = intlForm.markup_percent
     ? Math.round(exampleSadc * (1 + Number(intlForm.markup_percent) / 100))
