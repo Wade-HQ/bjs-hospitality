@@ -20,7 +20,7 @@ router.put('/', requireAuth, requireRole('owner', 'hotel_manager'), (req, res) =
     const db = getDb();
     const f = req.body;
     const fields = ['name','address','country','timezone','contact_email','contact_phone',
-      'tax_label','tax_rate','invoice_prefix','invoice_counter','payment_instructions',
+      'currency','tax_label','tax_rate','tax_inclusive','invoice_prefix','invoice_counter','payment_instructions',
       'smtp_host','smtp_port','smtp_user','smtp_pass','smtp_from'];
     const sets = fields.map(k => `${k} = COALESCE(?, ${k})`).join(', ');
     const vals = fields.map(k => f[k] !== undefined ? f[k] : null);
