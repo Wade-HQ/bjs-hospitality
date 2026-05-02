@@ -122,11 +122,9 @@ router.delete('/:id', requireAuth, requireRole('owner','hotel_manager'), (req, r
     .get(req.params.id, PROPERTY_ID());
   if (!existing) return res.status(404).json({ error: 'Room type not found' });
 
-  const roomCount = db.prepare('SELECT COUNT(*) as c FROM rooms WHERE room_type_id = ? AND property_id = ?')
-    .get(req.params.id, PROPERTY_ID());
-  if (roomCount.c > 0) {
-    return res.status(409).json({ error: 'Cannot delete room type that has rooms assigned' });
-  }
+  // Null out room_type_id on any rooms that reference this type before deleting
+  db.prepare('UPDATE rooms SET room_type_id = NULL WHERE room_type_id = ? AND property_id = ?')
+    .run(req.params.id, PROPERTY_ID());
 
   db.prepare('DELETE FROM room_types WHERE id = ? AND property_id = ?').run(req.params.id, PROPERTY_ID());
   return res.json({ ok: true });
