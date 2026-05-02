@@ -117,6 +117,27 @@ export default function BookingDetail() {
       .then(r => setEditRooms(r.data?.rooms || []));
   }, [editForm.room_type_id, editModal]);
 
+  // Load rate plans for edit modal when room_type + dates + pax are set
+  useEffect(() => {
+    if (!editModal || !editForm.room_type_id || !editForm.check_in || !editForm.check_out || !editForm.adults) {
+      setEditRatePlans([]);
+      return;
+    }
+    const ci = new Date(editForm.check_in), co = new Date(editForm.check_out);
+    if (co <= ci) return;
+    const nights = Math.max(1, Math.round((co - ci) / 86400000));
+    const params = new URLSearchParams({
+      room_type_id: editForm.room_type_id,
+      check_in: editForm.check_in,
+      adults: editForm.adults,
+      children: editForm.children || 0,
+      nights,
+    });
+    api.get(`/api/rates/calculate?${params}`)
+      .then(r => setEditRatePlans(r.data?.rate_plans || []))
+      .catch(() => setEditRatePlans([]));
+  }, [editModal, editForm.room_type_id, editForm.check_in, editForm.check_out, editForm.adults, editForm.children]);
+
   useEffect(() => {
     if (!guestSearch.trim() || guestSearch.length < 2) { setGuestResults([]); return; }
     const timer = setTimeout(() => {
