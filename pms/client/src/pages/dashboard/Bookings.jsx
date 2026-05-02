@@ -6,9 +6,15 @@ import { useProperty } from '../../contexts/PropertyContext.jsx';
 import StatusBadge from '../../components/StatusBadge.jsx';
 import Table from '../../components/Table.jsx';
 
-const STATUS_OPTIONS = ['', 'provisional', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'no_show'];
-const PAYMENT_OPTIONS = ['', 'unpaid', 'deposit_paid', 'fully_paid'];
-const SOURCE_OPTIONS = ['', 'direct', 'ota_internal', 'booking_com', 'airbnb', 'expedia', 'google'];
+const STATUS_OPTIONS = ['provisional', 'confirmed', 'checked_in', 'checked_out'];
+const PAYMENT_OPTIONS = ['unpaid', 'deposit_paid', 'fully_paid'];
+const SOURCE_OPTIONS = ['direct', 'ota_internal', 'booking_com', 'airbnb', 'expedia', 'google'];
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+}
 
 export default function Bookings() {
   const navigate = useNavigate();
@@ -50,13 +56,8 @@ export default function Bookings() {
 
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
 
-  const setFilter = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  const clearFilters = () => {
-    setFilters({ status: '', payment_status: '', room_type: '', source: '', from: '', to: '', search: '' });
-  };
+  const setFilter = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
+  const clearFilters = () => setFilters({ status: '', payment_status: '', room_type: '', source: '', from: '', to: '', search: '' });
 
   const handleCheckIn = async (id, e) => {
     e.stopPropagation();
@@ -102,9 +103,9 @@ export default function Bookings() {
   };
 
   const exportCSV = () => {
-    const headers = ['ID', 'Guest', 'Room', 'Check In', 'Check Out', 'Nights', 'Status', 'Payment', 'Total', 'Balance'];
+    const headers = ['ID', 'Ref', 'Guest', 'Room', 'Check In', 'Check Out', 'Nights', 'Status', 'Payment', 'Total', 'Balance'];
     const rows = bookings.map(b => [
-      b.id, b.guest_name, b.room_number || b.room_name,
+      b.id, b.booking_ref, b.guest_name, b.room_number || b.room_name,
       b.check_in?.slice(0, 10), b.check_out?.slice(0, 10),
       b.nights, b.status, b.payment_status,
       b.total_amount, b.balance_due,
@@ -123,20 +124,51 @@ export default function Bookings() {
   const fmt = (n) => Number(n || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const columns = [
-    { key: 'id', label: 'Ref', render: (v) => <span className="font-mono text-xs text-gray-500">#{v}</span> },
-    { key: 'guest_name', label: 'Guest', render: (v) => <span className="font-medium text-primary">{v}</span> },
-    { key: 'room_number', label: 'Room', render: (v, row) => v || row.room_name || '—' },
-    { key: 'check_in', label: 'Check In', render: (v) => v?.slice(0, 10) || '—' },
-    { key: 'check_out', label: 'Check Out', render: (v) => v?.slice(0, 10) || '—' },
-    { key: 'nights', label: 'Nights' },
-    { key: 'status', label: 'Status', render: (v) => <StatusBadge status={v} /> },
-    { key: 'payment_status', label: 'Payment', render: (v) => <StatusBadge status={v} /> },
     {
-      key: 'total_amount', label: 'Total',
+      key: 'booking_ref',
+      label: 'Ref',
+      render: (v, row) => (
+        <span className="font-mono text-xs text-gray-500">{v || `#${row.id}`}</span>
+      )
+    },
+    {
+      key: 'guest_name',
+      label: 'Guest',
+      render: (v) => <span className="font-medium text-primary">{v || '—'}</span>
+    },
+    {
+      key: 'room_number',
+      label: 'Room',
+      render: (v, row) => v || row.room_type_name || '—'
+    },
+    {
+      key: 'check_in',
+      label: 'Stay',
+      render: (v, row) => (
+        <div>
+          <div>{fmtDate(v)} – {fmtDate(row.check_out)}</div>
+          <div className="text-xs text-gray-400">{row.nights} night{row.nights !== 1 ? 's' : ''}</div>
+        </div>
+      )
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (v) => <StatusBadge status={v} />
+    },
+    {
+      key: 'payment_status',
+      label: 'Payment',
+      render: (v) => <StatusBadge status={v} />
+    },
+    {
+      key: 'total_amount',
+      label: 'Total',
       render: (v) => <span className="font-medium">{currency} {fmt(v)}</span>
     },
     {
-      key: 'balance_due', label: 'Balance',
+      key: 'balance_due',
+      label: 'Balance',
       render: (v) => (
         <span className={Number(v) > 0 ? 'text-red-600 font-semibold' : 'text-green-600'}>
           {currency} {fmt(v)}
@@ -144,7 +176,10 @@ export default function Bookings() {
       )
     },
     {
-      key: 'actions', label: 'Actions',
+      key: 'actions',
+      label: '',
+      thClassName: 'sticky right-0 bg-primary',
+      tdClassName: 'sticky right-0 bg-white border-l border-gray-100',
       render: (_, row) => (
         <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
           <button
@@ -171,7 +206,7 @@ export default function Bookings() {
               CO
             </button>
           )}
-          {row.status !== 'cancelled' && row.status !== 'checked_out' && (
+          {row.status !== 'cancelled' && row.status !== 'checked_out' && row.status !== 'no_show' && (
             <button
               onClick={(e) => handleCancel(row.id, e)}
               disabled={actionLoading[row.id] === 'cancel'}
@@ -187,7 +222,6 @@ export default function Bookings() {
 
   return (
     <div className="p-6 space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-primary">Bookings</h1>
@@ -209,12 +243,11 @@ export default function Bookings() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <input
             type="text"
-            placeholder="Search guest, room..."
+            placeholder="Search guest, ref..."
             value={filters.search}
             onChange={e => setFilter('search', e.target.value)}
             className="col-span-2 sm:col-span-3 lg:col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal"
@@ -224,8 +257,8 @@ export default function Bookings() {
             onChange={e => setFilter('status', e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal"
           >
-            <option value="">All Statuses</option>
-            {STATUS_OPTIONS.filter(Boolean).map(s => (
+            <option value="">All Active</option>
+            {STATUS_OPTIONS.map(s => (
               <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
             ))}
           </select>
@@ -235,7 +268,7 @@ export default function Bookings() {
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal"
           >
             <option value="">All Payments</option>
-            {PAYMENT_OPTIONS.filter(Boolean).map(s => (
+            {PAYMENT_OPTIONS.map(s => (
               <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
             ))}
           </select>
@@ -255,7 +288,7 @@ export default function Bookings() {
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal"
           >
             <option value="">All Sources</option>
-            {SOURCE_OPTIONS.filter(Boolean).map(s => (
+            {SOURCE_OPTIONS.map(s => (
               <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
             ))}
           </select>
@@ -280,7 +313,6 @@ export default function Bookings() {
         </div>
       </div>
 
-      {/* Table */}
       <Table
         columns={columns}
         data={bookings}
