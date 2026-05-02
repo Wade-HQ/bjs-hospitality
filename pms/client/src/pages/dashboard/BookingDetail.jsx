@@ -104,8 +104,6 @@ export default function BookingDetail() {
         room_id: editForm.room_id || null,
         adults: Number(editForm.adults),
         children: Number(editForm.children || 0),
-        region: editForm.region,
-        meal_package_id: editForm.meal_package_id || null,
         rate_plan_id: editForm.rate_plan_id || null,
         guest_id: editForm.guest_id,
         special_requests: editForm.special_requests || null,
