@@ -625,6 +625,8 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
     special_requests || null, internal_notes || null,
     channel_booking_ref || null,
     status || null, payment_status || null,
+    guest_id || null, region || null,
+    meal_package_id !== undefined ? (meal_package_id || null) : null, source || null,
     req.params.id, PROPERTY_ID()
   );
 
