@@ -662,11 +662,14 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
           nights,
           check_in: newCheckIn,
         });
-        const taxRate = existing.tax_rate || 0;
-        const taxAmt = Math.round(rpResult.total_for_stay * (taxRate / 100));
+        const propertySettings = db.prepare('SELECT tax_rate, tax_inclusive FROM properties WHERE id = ?').get(PROPERTY_ID());
+        const taxRate = parseFloat(propertySettings?.tax_rate ?? existing.tax_rate ?? 0);
+        const taxInclusive = propertySettings?.tax_inclusive ?? 1;
         subtotal = rpResult.total_for_stay + extrasTotal - disc;
-        taxAmount = subtotal * (taxRate / 100);
-        totalAmount = subtotal + taxAmount;
+        taxAmount = taxInclusive
+          ? Math.round(subtotal * taxRate / (100 + taxRate))
+          : subtotal * (taxRate / 100);
+        totalAmount = taxInclusive ? subtotal : subtotal + taxAmount;
       } catch (e) {
         console.error('[bookings] PUT rate plan pricing error:', e.message);
         return res.status(400).json({ error: `Rate plan pricing failed: ${e.message}` });
