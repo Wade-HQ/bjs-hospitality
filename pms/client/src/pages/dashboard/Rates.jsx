@@ -463,7 +463,7 @@ function MealsTab() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cost per person / night (ZAR) <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cost per person / night ({property?.currency || 'ZAR'}) <span className="text-red-500">*</span></label>
             <input
               type="number"
               value={form.cost_per_person || ''}
