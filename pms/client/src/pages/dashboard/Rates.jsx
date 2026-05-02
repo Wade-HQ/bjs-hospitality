@@ -163,6 +163,12 @@ function BaseRatesTab() {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Base Rates ({property?.currency || 'ZAR'})</span>
+          <button onClick={() => setIncreaseModal(true)} className="text-sm border border-amber-300 text-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-50">
+            Increase All Rates
+          </button>
+        </div>
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
             <tr>
@@ -176,8 +182,8 @@ function BaseRatesTab() {
               <tr key={r.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium text-primary">{r.room_type_name}</td>
                 <td className="px-4 py-3 text-gray-600">{r.max_occupancy}</td>
-                <td className="px-4 py-3 font-medium">{fmt(r.rate_per_person)}</td>
-                <td className="px-4 py-3 font-medium text-teal">{fmt(r.international_rate)}</td>
+                <td className="px-4 py-3 font-medium">{fmt(r.rate_per_person, property?.currency)}</td>
+                <td className="px-4 py-3 font-medium text-teal">{fmt(r.international_rate, property?.currency)}</td>
                 <td className="px-4 py-3">
                   <button onClick={() => openEditRate(r)} className="text-teal text-xs hover:underline font-medium">
                     Edit
