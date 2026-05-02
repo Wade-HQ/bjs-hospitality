@@ -62,7 +62,7 @@ export default function Quotations() {
         if (plans.length === 1) setForm(p => ({ ...p, rate_plan_id: String(plans[0].id) }));
       })
       .catch(() => { setRatePlans([]); setRateErrors([]); });
-  }, [form.room_type_id, form.check_in, form.check_out, form.adults, form.children]);
+  }, [form.room_type_id, form.check_in, form.check_out, form.adults, form.children, form.region]);
 
   useEffect(() => {
     const { rate_plan_id, check_in, check_out, adults, children } = form;
