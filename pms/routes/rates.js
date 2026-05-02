@@ -411,7 +411,7 @@ router.put('/seasons/:id', requireAuth, requireRole(...WRITE_ROLES), (req, res) 
 
   const {
     name, start_date, end_date, uplift_percent,
-    applies_to_sadc, applies_to_international, applies_to_channels, active
+    applies_to_sadc, applies_to_international, applies_to_channels, active, notes
   } = req.body;
 
   // Validate date ordering using resolved values
