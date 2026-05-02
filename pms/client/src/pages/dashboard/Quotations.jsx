@@ -97,6 +97,7 @@ export default function Quotations() {
         check_out: form.check_out,
         adults: form.adults,
         children: form.children || 0,
+        region: form.region || 'sadc',
         guest_name: form.guest_name || null,
         guest_email: form.guest_email || null,
         guest_phone: form.guest_phone || null,
