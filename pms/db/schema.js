@@ -628,8 +628,7 @@ async function runMigrations(db) {
       console.log(`[seed] Room type added: ${rt.name}`);
       const rtId = db.prepare('SELECT last_insert_rowid() as id').get()?.id;
       if (rtId) {
-        db.prepare('INSERT OR IGNORE INTO room_type_rates (room_type_id, region, rate_per_person) VALUES (?, ?, ?)').run(rtId, 'international', rt.base_rate || 0);
-        db.prepare('INSERT OR IGNORE INTO room_type_rates (room_type_id, region, rate_per_person) VALUES (?, ?, ?)').run(rtId, 'sadc', rt.base_rate || 0);
+        db.prepare('INSERT OR IGNORE INTO room_base_rates (property_id, room_type_id, room_type_name, rate_per_person, max_occupancy) VALUES (?, ?, ?, ?, ?)').run(1, rtId, rt.name, rt.base_rate || 0, rt.max_occupancy || 2);
       }
     }
     db.prepare('UPDATE properties SET room_types_seeded=1 WHERE id=1').run();
