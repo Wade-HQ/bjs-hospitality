@@ -969,4 +969,304 @@ router.post('/:id/swap-room', requireAuth, requireRole('owner','hotel_manager','
   return res.json({ booking: updated, message: `Moved to room ${targetRoom.room_number || targetRoom.name}` });
 });
 
+// ── Extras ───────────────────────────────────────────────────────────────────
+
+// GET /api/bookings/:id/extras
+router.get('/:id/extras', requireAuth, (req, res) => {
+  const db = getDb();
+  const booking = db.prepare('SELECT extras_json FROM bookings WHERE id = ? AND property_id = ?')
+    .get(req.params.id, PROPERTY_ID());
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+  try {
+    const extras = JSON.parse(booking.extras_json || '[]');
+    return res.json({ extras });
+  } catch { return res.json({ extras: [] }); }
+});
+
+// POST /api/bookings/:id/extras — add an extra line item
+router.post('/:id/extras', requireAuth, requireRole('owner','hotel_manager','front_desk','accountant'), (req, res) => {
+  try {
+    const db = getDb();
+    const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND property_id = ?')
+      .get(req.params.id, PROPERTY_ID());
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    const { description, qty = 1, unit_price, type = 'manual', notes = '', external_ref = null } = req.body;
+    if (!description) return res.status(400).json({ error: 'description is required' });
+    if (unit_price == null) return res.status(400).json({ error: 'unit_price is required' });
+
+    const extras = (() => { try { return JSON.parse(booking.extras_json || '[]'); } catch { return []; } })();
+    const nextId = extras.length > 0 ? Math.max(...extras.map(e => e.id || 0)) + 1 : 1;
+    const total = Math.round(parseFloat(unit_price) * parseInt(qty) * 100) / 100;
+    const newExtra = { id: nextId, type, description, qty: parseInt(qty), unit_price: parseFloat(unit_price), total, notes, external_ref };
+    extras.push(newExtra);
+
+    const extrasTotal = extras.reduce((s, e) => s + (e.total || 0), 0);
+    const property = db.prepare('SELECT tax_inclusive FROM properties WHERE id = ?').get(PROPERTY_ID());
+    const newTotal = booking.subtotal + booking.tax_amount + extrasTotal - (booking.discount_amount || 0);
+
+    db.prepare(`UPDATE bookings SET extras_json = ?, total_amount = ?, net_to_property = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+      .run(JSON.stringify(extras), newTotal, newTotal - (booking.commission_amount || 0), booking.id);
+
+    return res.json({ extra: newExtra, extras, total_amount: newTotal });
+  } catch (e) {
+    console.error('[extras POST]', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE /api/bookings/:id/extras/:extraId — remove an extra
+router.delete('/:id/extras/:extraId', requireAuth, requireRole('owner','hotel_manager','front_desk','accountant'), (req, res) => {
+  try {
+    const db = getDb();
+    const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND property_id = ?')
+      .get(req.params.id, PROPERTY_ID());
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    const extras = (() => { try { return JSON.parse(booking.extras_json || '[]'); } catch { return []; } })();
+    const filtered = extras.filter(e => e.id !== parseInt(req.params.extraId));
+
+    const extrasTotal = filtered.reduce((s, e) => s + (e.total || 0), 0);
+    const newTotal = booking.subtotal + booking.tax_amount + extrasTotal - (booking.discount_amount || 0);
+
+    db.prepare(`UPDATE bookings SET extras_json = ?, total_amount = ?, net_to_property = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+      .run(JSON.stringify(filtered), newTotal, newTotal - (booking.commission_amount || 0), booking.id);
+
+    return res.json({ ok: true, extras: filtered, total_amount: newTotal });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Price Override ────────────────────────────────────────────────────────────
+
+// POST /api/bookings/:id/price-override — request a price override (any write role)
+router.post('/:id/price-override', requireAuth, requireRole('owner','hotel_manager','front_desk','accountant'), (req, res) => {
+  try {
+    const db = getDb();
+    const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND property_id = ?')
+      .get(req.params.id, PROPERTY_ID());
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    const { override_total, reason } = req.body;
+    if (!override_total || !reason) return res.status(400).json({ error: 'override_total and reason are required' });
+
+    const currentTotal = booking.subtotal + booking.tax_amount;
+    const overrideAmount = parseFloat(override_total);
+    const discountAmount = Math.max(0, currentTotal - overrideAmount);
+
+    const role = req.user?.role;
+    const canAutoApprove = role === 'owner' || role === 'hotel_manager';
+    const status = canAutoApprove ? 'approved' : 'pending';
+
+    if (canAutoApprove) {
+      db.prepare(`UPDATE bookings SET
+        discount_amount = ?,
+        total_amount = ?,
+        net_to_property = ?,
+        price_override_status = 'approved',
+        price_override_amount = ?,
+        price_override_reason = ?,
+        price_override_requested_by = ?,
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?`).run(
+        discountAmount,
+        overrideAmount,
+        overrideAmount - (booking.commission_amount || 0),
+        overrideAmount,
+        reason,
+        req.user.name || req.user.username || 'staff',
+        booking.id
+      );
+    } else {
+      db.prepare(`UPDATE bookings SET
+        price_override_status = 'pending',
+        price_override_amount = ?,
+        price_override_reason = ?,
+        price_override_requested_by = ?,
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?`).run(
+        overrideAmount,
+        reason,
+        req.user.name || req.user.username || 'staff',
+        booking.id
+      );
+    }
+
+    const updated = getBookingById(db, booking.id);
+    return res.json({ booking: updated, status, message: canAutoApprove ? 'Override applied' : 'Override pending approval' });
+  } catch (e) {
+    console.error('[price-override POST]', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/bookings/:id/price-override/approve — approve a pending override (manager/owner only)
+router.post('/:id/price-override/approve', requireAuth, requireRole('owner','hotel_manager'), (req, res) => {
+  try {
+    const db = getDb();
+    const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND property_id = ?')
+      .get(req.params.id, PROPERTY_ID());
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (booking.price_override_status !== 'pending') {
+      return res.status(409).json({ error: 'No pending override to approve' });
+    }
+
+    const overrideAmount = parseFloat(booking.price_override_amount);
+    const currentTotal = booking.subtotal + booking.tax_amount;
+    const discountAmount = Math.max(0, currentTotal - overrideAmount);
+
+    db.prepare(`UPDATE bookings SET
+      discount_amount = ?,
+      total_amount = ?,
+      net_to_property = ?,
+      price_override_status = 'approved',
+      updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?`).run(
+      discountAmount,
+      overrideAmount,
+      overrideAmount - (booking.commission_amount || 0),
+      booking.id
+    );
+
+    const updated = getBookingById(db, booking.id);
+    return res.json({ booking: updated });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/bookings/:id/price-override/reject — reject a pending override
+router.post('/:id/price-override/reject', requireAuth, requireRole('owner','hotel_manager'), (req, res) => {
+  try {
+    const db = getDb();
+    const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND property_id = ?')
+      .get(req.params.id, PROPERTY_ID());
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    db.prepare(`UPDATE bookings SET price_override_status = 'rejected', updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+      .run(booking.id);
+    return res.json({ ok: true });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Shuttle/Paragliding proxy ─────────────────────────────────────────────────
+
+// POST /api/bookings/:id/extras/shuttle — create shuttle booking + add as extra
+router.post('/:id/extras/shuttle', requireAuth, requireRole('owner','hotel_manager','front_desk','accountant'), async (req, res) => {
+  try {
+    const db = getDb();
+    const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND property_id = ?')
+      .get(req.params.id, PROPERTY_ID());
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    const { name, email, phone, from: fromLoc, to: toLoc, date, time, pax, notes, price, type = 'SHUTTLE', return_trip, return_date, return_time } = req.body;
+    if (!fromLoc || !toLoc || !date) return res.status(400).json({ error: 'from, to, date required' });
+
+    const guestName = name || booking.guest_name || 'Guest';
+
+    const shuttleRes = await fetch('https://api-shuttles.bluejungle.solutions/api/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: guestName, email: email || booking.guest_email || null,
+        phone: phone || booking.guest_phone || null,
+        from: fromLoc, to: toLoc, date, time: time || '08:00',
+        pax: parseInt(pax) || 1, notes: notes || null,
+        type, return_trip: return_trip || false,
+        return_date: return_date || null, return_time: return_time || null,
+      }),
+    });
+
+    if (!shuttleRes.ok) {
+      const errBody = await shuttleRes.json().catch(() => ({}));
+      return res.status(502).json({ error: errBody.error || 'Shuttle booking failed' });
+    }
+
+    const shuttleData = await shuttleRes.json();
+    const bookingId = shuttleData.booking_id || shuttleData.id || null;
+
+    const extras = (() => { try { return JSON.parse(booking.extras_json || '[]'); } catch { return []; } })();
+    const nextId = extras.length > 0 ? Math.max(...extras.map(e => e.id || 0)) + 1 : 1;
+    const shuttlePrice = parseFloat(price) || 0;
+    const extra = {
+      id: nextId, type: 'shuttle',
+      description: `Shuttle: ${fromLoc} → ${toLoc} (${date})`,
+      qty: parseInt(pax) || 1, unit_price: shuttlePrice, total: shuttlePrice,
+      notes: notes || '', external_ref: bookingId ? String(bookingId) : null,
+    };
+    extras.push(extra);
+
+    const extrasTotal = extras.reduce((s, e) => s + (e.total || 0), 0);
+    const newTotal = booking.subtotal + booking.tax_amount + extrasTotal - (booking.discount_amount || 0);
+    db.prepare(`UPDATE bookings SET extras_json = ?, total_amount = ?, net_to_property = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+      .run(JSON.stringify(extras), newTotal, newTotal - (booking.commission_amount || 0), booking.id);
+
+    return res.json({ extra, extras, total_amount: newTotal, shuttle_ref: bookingId });
+  } catch (e) {
+    console.error('[extras/shuttle]', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/bookings/:id/extras/paragliding — create paragliding booking + add as extra
+router.post('/:id/extras/paragliding', requireAuth, requireRole('owner','hotel_manager','front_desk','accountant'), async (req, res) => {
+  try {
+    const db = getDb();
+    const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND property_id = ?')
+      .get(req.params.id, PROPERTY_ID());
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    const { name, email, phone, iso_date, time_slot, group_size, experience, notes, price } = req.body;
+    if (!iso_date) return res.status(400).json({ error: 'iso_date required' });
+
+    const guestName = name || booking.guest_name || 'Guest';
+
+    const pgRes = await fetch('https://api-paragliding.bluejungle.solutions/api/paragliding/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: guestName, email: email || booking.guest_email || null,
+        phone: phone || booking.guest_phone || null,
+        iso_date, booking_date: iso_date,
+        time_slot: time_slot || null,
+        group_size: parseInt(group_size) || 1,
+        experience: experience || null,
+        notes: notes || null,
+      }),
+    });
+
+    if (!pgRes.ok) {
+      const errBody = await pgRes.json().catch(() => ({}));
+      return res.status(502).json({ error: errBody.error || 'Paragliding booking failed' });
+    }
+
+    const pgData = await pgRes.json();
+    const pgRef = pgData.ref || null;
+
+    const extras = (() => { try { return JSON.parse(booking.extras_json || '[]'); } catch { return []; } })();
+    const nextId = extras.length > 0 ? Math.max(...extras.map(e => e.id || 0)) + 1 : 1;
+    const pgPrice = parseFloat(price) || 0;
+    const size = parseInt(group_size) || 1;
+    const extra = {
+      id: nextId, type: 'paragliding',
+      description: `Paragliding (${iso_date})`,
+      qty: size, unit_price: pgPrice, total: pgPrice * size,
+      notes: notes || '', external_ref: pgRef,
+    };
+    extras.push(extra);
+
+    const extrasTotal = extras.reduce((s, e) => s + (e.total || 0), 0);
+    const newTotal = booking.subtotal + booking.tax_amount + extrasTotal - (booking.discount_amount || 0);
+    db.prepare(`UPDATE bookings SET extras_json = ?, total_amount = ?, net_to_property = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+      .run(JSON.stringify(extras), newTotal, newTotal - (booking.commission_amount || 0), booking.id);
+
+    return res.json({ extra, extras, total_amount: newTotal, pg_ref: pgRef });
+  } catch (e) {
+    console.error('[extras/paragliding]', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
