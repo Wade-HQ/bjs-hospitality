@@ -179,6 +179,10 @@ router.put('/meals/:id', requireAuth, requireRole(...WRITE_ROLES), (req, res) =>
 
   const { name, cost_per_person, description, active } = req.body;
 
+  if (name !== undefined && !name.trim()) {
+    return res.status(400).json({ error: 'name cannot be empty' });
+  }
+
   if (cost_per_person !== undefined) {
     const cost = parseFloat(cost_per_person);
     if (!Number.isFinite(cost) || cost < 0) {
