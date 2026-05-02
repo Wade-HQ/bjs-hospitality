@@ -258,6 +258,41 @@ export default function BookingCalendar({ mode = 'booking', onNewBooking }) {
     }
   };
 
+  const openSwapMode = async () => {
+    setSwapLoading(true);
+    try {
+      const r = await api.get('/api/rooms', {
+        params: {
+          available: 'true',
+          check_in: selectedBooking.check_in,
+          check_out: selectedBooking.check_out,
+        }
+      });
+      setSwapRooms(r.data?.rooms || []);
+      setSwapMode(true);
+    } catch {
+      addToast('Failed to load available rooms', 'error');
+    } finally {
+      setSwapLoading(false);
+    }
+  };
+
+  const handleSwapRoom = async (targetRoomId, targetRoomLabel) => {
+    if (!window.confirm(`Move this booking to ${targetRoomLabel}?`)) return;
+    setActionLoading(true);
+    try {
+      await api.post(`/api/bookings/${selectedBooking.id}/swap-room`, { target_room_id: targetRoomId });
+      addToast(`Booking moved to ${targetRoomLabel}`);
+      setSwapMode(false);
+      setSidebarOpen(false);
+      fetchData();
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Swap failed', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const today = toDateOnly(new Date());
   const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
