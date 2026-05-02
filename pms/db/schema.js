@@ -269,15 +269,6 @@ async function runMigrations(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS google_hotel_rates (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      property_id INTEGER NOT NULL REFERENCES properties(id),
-      room_type_id INTEGER REFERENCES room_types(id),
-      display_rate REAL,
-      currency TEXT,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
     CREATE TABLE IF NOT EXISTS booking_audit_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       booking_id INTEGER NOT NULL REFERENCES bookings(id),
