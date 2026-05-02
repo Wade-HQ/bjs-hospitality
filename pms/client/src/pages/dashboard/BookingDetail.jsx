@@ -69,6 +69,37 @@ export default function BookingDetail() {
     } catch (e) { addToast('Failed to generate invoice', 'error'); }
   };
 
+  const uploadDocument = async (file) => {
+    if (!file || !booking?.booking?.guest_id) return;
+    setDocUploading(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('doc_type', docType);
+    try {
+      await api.post(`/api/guests/${booking.booking.guest_id}/documents`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      addToast('Document uploaded');
+      loadDocuments(booking.booking.guest_id);
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Upload failed', 'error');
+    } finally {
+      setDocUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const deleteDocument = async (docId) => {
+    if (!window.confirm('Delete this document?')) return;
+    try {
+      await api.delete(`/api/guests/${booking.booking.guest_id}/documents/${docId}`);
+      addToast('Deleted');
+      loadDocuments(booking.booking.guest_id);
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Error', 'error');
+    }
+  };
+
   const openEditModal = () => {
     const b = booking.booking;
     setEditForm({
