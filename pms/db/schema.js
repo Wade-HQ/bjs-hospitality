@@ -522,6 +522,127 @@ async function runMigrations(db) {
     console.log(`[seed] Seeded room_type_rates for ${roomTypesWithoutRates.length} room types`);
   }
 
+  // ── Step 3: Seed new tables from old data (idempotent) ───────────────────────
+
+  // 3a. room_base_rates — from room_type_rates (sadc region only = base rate)
+  for (const propId of [1, 2]) {
+    const emptyCheck = db.prepare('SELECT COUNT(*) as c FROM room_base_rates WHERE property_id=?').get(propId);
+    if (emptyCheck.c === 0) {
+      const oldTableExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='room_type_rates'`).get();
+      if (oldTableExists) {
+        db.exec(`
+          INSERT OR IGNORE INTO room_base_rates
+            (property_id, room_type_id, room_type_name, rate_per_person, currency, max_occupancy)
+          SELECT
+            rt.property_id,
+            rt.id,
+            rt.name,
+            COALESCE(rtr.rate_per_person, rt.base_rate, 0),
+            COALESCE(rt.currency, 'ZAR'),
+            rt.max_occupancy
+          FROM room_types rt
+          LEFT JOIN room_type_rates rtr ON rtr.room_type_id = rt.id AND rtr.region = 'sadc'
+          WHERE rt.property_id = ${propId}
+        `);
+        console.log(`[seed] room_base_rates seeded for property ${propId}`);
+      } else {
+        // Seed from room_types.base_rate directly if old table is gone
+        db.exec(`
+          INSERT OR IGNORE INTO room_base_rates
+            (property_id, room_type_id, room_type_name, rate_per_person, currency, max_occupancy)
+          SELECT property_id, id, name, COALESCE(base_rate, 0), COALESCE(currency, 'ZAR'), max_occupancy
+          FROM room_types WHERE property_id = ${propId}
+        `);
+        console.log(`[seed] room_base_rates seeded from room_types for property ${propId}`);
+      }
+    }
+  }
+
+  // 3b. international_rate_settings — default 30% markup per property
+  db.exec(`
+    INSERT OR IGNORE INTO international_rate_settings (property_id, markup_percent) VALUES (1, 30), (2, 30)
+  `);
+  console.log('[seed] international_rate_settings seeded');
+
+  // 3c. meal_components — from meal_packages
+  for (const propId of [1, 2]) {
+    const emptyCheck = db.prepare('SELECT COUNT(*) as c FROM meal_components WHERE property_id=?').get(propId);
+    if (emptyCheck.c === 0) {
+      const oldTableExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='meal_packages'`).get();
+      if (oldTableExists) {
+        db.exec(`
+          INSERT OR IGNORE INTO meal_components
+            (property_id, name, cost_per_person, sort_order)
+          SELECT property_id, name, price_per_person, sort_order
+          FROM meal_packages WHERE property_id = ${propId}
+        `);
+        console.log(`[seed] meal_components seeded from meal_packages for property ${propId}`);
+      }
+    }
+  }
+
+  // 3d. seasons — from seasonal_adjustments
+  for (const propId of [1, 2]) {
+    const emptyCheck = db.prepare('SELECT COUNT(*) as c FROM seasons WHERE property_id=?').get(propId);
+    if (emptyCheck.c === 0) {
+      const oldTableExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='seasonal_adjustments'`).get();
+      if (oldTableExists) {
+        db.exec(`
+          INSERT OR IGNORE INTO seasons
+            (property_id, name, start_date, end_date, uplift_percent)
+          SELECT property_id, name, start_date, end_date, pct_change
+          FROM seasonal_adjustments WHERE property_id = ${propId}
+        `);
+        console.log(`[seed] seasons seeded from seasonal_adjustments for property ${propId}`);
+      }
+    }
+  }
+
+  // 3e. channels — default channels per property
+  const DEFAULT_CHANNELS = [
+    { name: 'Booking.com',           type: 'ota',    markup: 0 },
+    { name: 'Airbnb',                type: 'ota',    markup: 0 },
+    { name: 'Expedia',               type: 'ota',    markup: 0 },
+    { name: 'Agent Rates',           type: 'agent',  markup: 0 },
+    { name: 'SEO / Website Specials', type: 'seo',   markup: 0 },
+  ];
+  for (const propId of [1, 2]) {
+    const emptyCheck = db.prepare('SELECT COUNT(*) as c FROM channels WHERE property_id=?').get(propId);
+    if (emptyCheck.c === 0) {
+      const insertCh = db.prepare(`
+        INSERT OR IGNORE INTO channels (property_id, name, type, markup_percent) VALUES (?, ?, ?, ?)
+      `);
+      for (const ch of DEFAULT_CHANNELS) {
+        insertCh.run(propId, ch.name, ch.type, ch.markup);
+      }
+      console.log(`[seed] channels seeded for property ${propId}`);
+    }
+  }
+
+  // 3f. rate_plans — "Room Only" plan for every room type
+  {
+    const emptyCheck = db.prepare('SELECT COUNT(*) as c FROM rate_plans').get();
+    if (emptyCheck.c === 0) {
+      db.exec(`
+        INSERT OR IGNORE INTO rate_plans (property_id, room_type_id, name, meal_components_json, sort_order)
+        SELECT rt.property_id, rt.id, 'Room Only', '[]', 0
+        FROM room_types rt
+        WHERE rt.id NOT IN (SELECT DISTINCT room_type_id FROM rate_plans)
+      `);
+      console.log('[seed] rate_plans seeded with Room Only plans for all room types');
+    }
+  }
+
+  // ── Step 5: Drop old rates tables (after seeding) ─────────────────────────
+  // Null out meal_package_id FK before dropping meal_packages to avoid orphaned refs
+  try { db.exec(`UPDATE bookings SET meal_package_id = NULL`); } catch (_) {}
+
+  const OLD_TABLES = ['rates', 'room_type_rates', 'meal_packages', 'seasonal_adjustments', 'google_hotel_rates'];
+  for (const t of OLD_TABLES) {
+    try { db.exec(`DROP TABLE IF EXISTS ${t}`); console.log(`[migration] Dropped ${t}`); }
+    catch (e) { console.log(`[migration] Could not drop ${t}: ${e.message}`); }
+  }
+
   // Property column migrations
   try { db.exec(`ALTER TABLE properties ADD COLUMN tax_inclusive INTEGER DEFAULT 1`); } catch (_) {}
 
