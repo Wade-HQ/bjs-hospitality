@@ -803,4 +803,45 @@ router.post('/:id/cancel', requireAuth, requireRole('owner','hotel_manager','fro
   return res.json({ booking: updated });
 });
 
+// POST /api/bookings/:id/swap-room
+router.post('/:id/swap-room', requireAuth, requireRole('owner','hotel_manager','front_desk'), (req, res) => {
+  const db = getDb();
+  const { target_room_id } = req.body;
+  if (!target_room_id) return res.status(400).json({ error: 'target_room_id is required' });
+
+  const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND property_id = ?')
+    .get(req.params.id, PROPERTY_ID());
+  if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+  if (['cancelled', 'checked_out', 'no_show'].includes(booking.status)) {
+    return res.status(400).json({ error: 'Cannot swap room on a completed/cancelled booking' });
+  }
+
+  const targetRoom = db.prepare('SELECT * FROM rooms WHERE id = ? AND property_id = ?')
+    .get(target_room_id, PROPERTY_ID());
+  if (!targetRoom) return res.status(404).json({ error: 'Target room not found' });
+
+  const conflict = db.prepare(`
+    SELECT id, booking_ref FROM bookings
+    WHERE room_id = ? AND property_id = ? AND id != ?
+      AND status NOT IN ('cancelled','no_show','checked_out')
+      AND check_in < ? AND check_out > ?
+  `).get(target_room_id, PROPERTY_ID(), booking.id, booking.check_out, booking.check_in);
+
+  if (conflict) {
+    return res.status(409).json({ error: `Room already booked (${conflict.booking_ref}) for those dates` });
+  }
+
+  db.prepare('UPDATE bookings SET room_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .run(target_room_id, booking.id);
+
+  try {
+    db.prepare(`INSERT INTO booking_audit_log (booking_id, user_id, action, old_value, new_value) VALUES (?, ?, 'room_swapped', ?, ?)`)
+      .run(booking.id, req.user.id, String(booking.room_id), String(target_room_id));
+  } catch (_) {}
+
+  const updated = getBookingById(db, booking.id);
+  return res.json({ booking: updated, message: `Moved to room ${targetRoom.room_number || targetRoom.name}` });
+});
+
 module.exports = router;
