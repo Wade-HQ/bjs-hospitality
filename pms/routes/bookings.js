@@ -520,8 +520,17 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
     room_id, room_type_id, check_in, check_out,
     adults, children, special_requests, internal_notes,
     channel_booking_ref, status, payment_status,
-    discount_amount, extras_json
+    discount_amount, extras_json,
+    guest_id, region, meal_package_id, source,
   } = req.body;
+
+  if (guest_id !== undefined) {
+    const guestExists = db.prepare('SELECT id FROM guests WHERE id = ?').get(guest_id);
+    if (!guestExists) return res.status(400).json({ error: 'Guest not found' });
+  }
+  if (region !== undefined && !['international', 'sadc'].includes(region)) {
+    return res.status(400).json({ error: 'region must be international or sadc' });
+  }
 
   // If changing dates or room, check availability
   const newCheckIn = check_in || existing.check_in;
