@@ -87,7 +87,7 @@ function BaseRatesTab() {
         api.get('/api/rates/international'),
       ]);
       setBaseRates(br.data?.base_rates || []);
-      setIntlSettings(intl.data?.settings || null);
+      setIntlSettings(intl.data?.international_settings || null);
     } catch {
       addToast('Failed to load base rates', 'error');
     } finally {
