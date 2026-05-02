@@ -216,6 +216,7 @@ router.get('/price-preview', requireAuth, (req, res) => {
         subtotal: result.total_for_stay,
         tax_amount: taxAmount,
         total_amount: totalAmount,
+        tax_inclusive: taxInclusive ? 1 : 0,
         season_name: result.season_applied?.name || null,
       });
     } catch (e) {
