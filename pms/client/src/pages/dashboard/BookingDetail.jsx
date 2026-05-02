@@ -382,7 +382,7 @@ export default function BookingDetail() {
               <option value="">— Keep existing —</option>
               {editRatePlans.map(p => (
                 <option key={p.id} value={p.id}>
-                  {p.rate_plan_name} — ZAR {Number(p.total_for_stay).toLocaleString()} total
+                  {p.rate_plan_name} — {booking?.booking?.currency || 'ZAR'} {Number(p.total_for_stay).toLocaleString()} total
                 </option>
               ))}
             </select>
