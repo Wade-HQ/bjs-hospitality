@@ -60,6 +60,7 @@ export default function App() {
                 <Route path="/dashboard/invoices" element={<Invoices />} />
                 <Route path="/dashboard/availability" element={<Availability />} />
                 <Route path="/dashboard/reports" element={<Reports />} />
+                <Route path="/dashboard/rates" element={<Rates />} />
                 <Route path="/dashboard/settings" element={<Settings />} />
               </Route>
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
