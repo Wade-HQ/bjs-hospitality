@@ -264,6 +264,7 @@ export default function BookingDetail() {
               placeholder="Search by name or email…"
               value={guestSearch}
               onChange={e => setGuestSearch(e.target.value)}
+              onBlur={() => setTimeout(() => setGuestResults([]), 150)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
             />
             {guestResults.length > 0 && (
