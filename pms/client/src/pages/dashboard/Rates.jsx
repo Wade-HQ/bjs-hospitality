@@ -221,7 +221,7 @@ function BaseRatesTab() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">SADC Rate / person / night</label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">ZAR</span>
+              <span className="text-sm text-gray-500">{property?.currency || 'ZAR'}</span>
               <input
                 type="number"
                 value={rateForm.rate_per_person || ''}
