@@ -126,17 +126,19 @@ export default function BookingDetail() {
     const { room_type_id, region, check_in, check_out, adults, children, meal_package_id } = editForm;
     if (!room_type_id || !check_in || !check_out || !adults || !editModal) { setEditPreview(null); return; }
     if (new Date(check_out) <= new Date(check_in)) { setEditPreview(null); return; }
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setEditPreviewLoading(true);
       try {
         const params = new URLSearchParams({ room_type_id, region: region || 'international', check_in, check_out, adults, children: children || 0 });
         if (meal_package_id) params.set('meal_package_id', meal_package_id);
-        const r = await api.get(`/api/bookings/price-preview?${params}`);
+        const r = await api.get(`/api/bookings/price-preview?${params}`, { signal: controller.signal });
         setEditPreview(r.data);
-      } catch { setEditPreview(null); }
-      finally { setEditPreviewLoading(false); }
+      } catch (e) {
+        if (e.name !== 'CanceledError' && e.code !== 'ERR_CANCELED') setEditPreview(null);
+      } finally { setEditPreviewLoading(false); }
     }, 350);
-    return () => clearTimeout(timer);
+    return () => { clearTimeout(timer); controller.abort(); };
   }, [editForm.room_type_id, editForm.region, editForm.check_in, editForm.check_out, editForm.adults, editForm.children, editForm.meal_package_id, editModal]);
 
   if (loading) return <div className="p-12 text-center text-gray-400">Loading…</div>;
