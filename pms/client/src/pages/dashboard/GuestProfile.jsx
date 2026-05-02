@@ -10,11 +10,19 @@ export default function GuestProfile() {
   const { addToast } = useToast();
   const [guest, setGuest] = useState(null);
   const [bookings, setBookings] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
+  const [uploading, setUploading] = useState(false);
+  const [docType, setDocType] = useState('passport');
+  const fileInputRef = useRef(null);
 
   const load = () => {
-    api.get(`/api/guests/${id}`).then(r => { setGuest(r.data.guest); setForm(r.data.guest); });
+    api.get(`/api/guests/${id}`).then(r => {
+      setGuest(r.data.guest);
+      setForm(r.data.guest);
+      setDocuments(r.data.documents || []);
+    });
     api.get('/api/bookings', { params: { guest_id: id } }).then(r => setBookings(r.data.bookings || []));
   };
   useEffect(load, [id]);
@@ -22,6 +30,31 @@ export default function GuestProfile() {
   const save = async () => {
     try { await api.put(`/api/guests/${id}`, form); addToast('Guest updated'); setEditing(false); load(); }
     catch (e) { addToast(e.response?.data?.error || 'Error', 'error'); }
+  };
+
+  const uploadDocument = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('doc_type', docType);
+    try {
+      await api.post(`/api/guests/${id}/documents`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      addToast('Document uploaded');
+      load();
+    } catch (e) { addToast(e.response?.data?.error || 'Upload failed', 'error'); }
+    finally { setUploading(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
+  };
+
+  const deleteDocument = async (docId) => {
+    if (!window.confirm('Delete this document?')) return;
+    try {
+      await api.delete(`/api/guests/${id}/documents/${docId}`);
+      addToast('Document deleted');
+      load();
+    } catch (e) { addToast(e.response?.data?.error || 'Error', 'error'); }
   };
 
   if (!guest) return <div className="p-12 text-center text-gray-400">Loading…</div>;
