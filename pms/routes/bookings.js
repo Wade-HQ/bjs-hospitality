@@ -408,27 +408,55 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
   const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(PROPERTY_ID());
 
   // Calculate financials using the pricing utility
-  let roomRate, mealTotal, subtotal, taxAmount, totalAmount;
-  try {
-    const pricing = calculateBookingPrice(db, {
-      property_id: PROPERTY_ID(),
-      room_type_id: resolvedRoomTypeId,
-      region: region || 'international',
-      check_in,
-      check_out,
-      nights,
-      adults: parseInt(adults),
-      children: parseInt(children || 0),
-      meal_package_id: meal_package_id ? parseInt(meal_package_id) : null,
-    });
-    roomRate = pricing.adjusted_rate;
-    mealTotal = pricing.meal_total;
-    subtotal = pricing.subtotal;
-    taxAmount = pricing.tax_amount;
-    totalAmount = pricing.total_amount;
-  } catch (e) {
-    console.error('[bookings] pricing error:', e.message);
-    return res.status(422).json({ error: `Pricing error: ${e.message}` });
+  let roomRate, mealTotal, subtotal, taxAmount, totalAmount, seasonName;
+  if (rate_plan_id) {
+    // New rate plan path
+    try {
+      const rpResult = calculateRatePlan(db, {
+        property_id: PROPERTY_ID(),
+        rate_plan_id: parseInt(rate_plan_id),
+        adults: parseInt(adults),
+        children: parseInt(children || 0),
+        nights,
+        check_in,
+      });
+      const property = db.prepare('SELECT tax_rate FROM properties WHERE id = ?').get(PROPERTY_ID());
+      const taxRate = property?.tax_rate || 0;
+      const taxAmt = Math.round(rpResult.total_for_stay * (taxRate / 100));
+      roomRate = rpResult.total_per_night;
+      mealTotal = rpResult.meal_total_per_night * nights;
+      subtotal = rpResult.total_for_stay;
+      taxAmount = taxAmt;
+      totalAmount = rpResult.total_for_stay + taxAmt;
+      seasonName = rpResult.season_applied?.name || null;
+    } catch (e) {
+      console.error('[bookings] rate plan pricing error:', e.message);
+      return res.status(400).json({ error: e.message });
+    }
+  } else {
+    // Legacy path: region + meal_package_id
+    try {
+      const pricing = calculateBookingPrice(db, {
+        property_id: PROPERTY_ID(),
+        room_type_id: resolvedRoomTypeId,
+        region: region || 'international',
+        check_in,
+        check_out,
+        nights,
+        adults: parseInt(adults),
+        children: parseInt(children || 0),
+        meal_package_id: meal_package_id ? parseInt(meal_package_id) : null,
+      });
+      roomRate = pricing.adjusted_rate;
+      mealTotal = pricing.meal_total;
+      subtotal = pricing.subtotal;
+      taxAmount = pricing.tax_amount;
+      totalAmount = pricing.total_amount;
+      seasonName = null;
+    } catch (e) {
+      console.error('[bookings] pricing error:', e.message);
+      return res.status(422).json({ error: `Pricing error: ${e.message}` });
+    }
   }
 
   const effectiveCommissionRate = commission_rate !== undefined
