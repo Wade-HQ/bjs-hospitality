@@ -153,13 +153,6 @@ export default function Settings() {
   const [rtDeleteConfirm, setRtDeleteConfirm] = useState(null);
   const [activeSection, setActiveSection] = useState('rooms');
   const { addToast } = useToast();
-  const [mealPackages, setMealPackages] = useState([]);
-  const [seasons, setSeasons] = useState([]);
-  const [roomTypeRates, setRoomTypeRates] = useState({});
-  const [mealModal, setMealModal] = useState(false);
-  const [mealForm, setMealForm] = useState({ name: '', price_per_person: '', is_online: true, is_sto: true, is_agent: true, is_ota: true });
-  const [seasonModal, setSeasonModal] = useState(false);
-  const [seasonForm, setSeasonForm] = useState({ name: '', pct_change: '', start_date: '', end_date: '' });
 
   const load = () => {
     api.get('/api/rooms').then(r => setRooms(r.data?.rooms || []));
