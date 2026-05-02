@@ -21,7 +21,9 @@ router.put('/', requireAuth, requireRole('owner', 'hotel_manager'), (req, res) =
     const f = req.body;
     const fields = ['name','address','country','timezone','contact_email','contact_phone',
       'currency','tax_label','tax_rate','tax_inclusive','invoice_prefix','invoice_counter','payment_instructions',
-      'smtp_host','smtp_port','smtp_user','smtp_pass','smtp_from'];
+      'smtp_host','smtp_port','smtp_user','smtp_pass','smtp_from',
+      'logo_url','company_reg','bank_name','bank_account','bank_branch','swift_code',
+      'invoice_footer','quote_validity_days'];
     const sets = fields.map(k => `${k} = COALESCE(?, ${k})`).join(', ');
     const vals = fields.map(k => f[k] !== undefined ? f[k] : null);
     db.prepare(`UPDATE properties SET ${sets} WHERE id = ?`).run(...vals, PROPERTY_ID);
