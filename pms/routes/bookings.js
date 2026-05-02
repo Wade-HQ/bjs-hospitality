@@ -608,6 +608,10 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
       channel_booking_ref = COALESCE(?, channel_booking_ref),
       status = COALESCE(?, status),
       payment_status = COALESCE(?, payment_status),
+      guest_id = COALESCE(?, guest_id),
+      region = COALESCE(?, region),
+      meal_package_id = COALESCE(?, meal_package_id),
+      source = COALESCE(?, source),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ? AND property_id = ?
   `).run(
