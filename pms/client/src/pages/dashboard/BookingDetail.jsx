@@ -77,7 +77,7 @@ export default function BookingDetail() {
     ]).then(([rtRes, mpRes]) => {
       setEditRoomTypes(rtRes.data?.room_types || []);
       setEditMealPackages(mpRes.data?.meal_packages || []);
-    });
+    }).catch(() => addToast('Failed to load room options', 'error'));
     setEditModal(true);
   };
 
