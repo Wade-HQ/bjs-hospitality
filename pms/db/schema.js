@@ -527,6 +527,14 @@ async function runMigrations(db) {
 
   // Property column migrations
   try { db.exec(`ALTER TABLE properties ADD COLUMN tax_inclusive INTEGER DEFAULT 1`); } catch (_) {}
+  try { db.exec(`ALTER TABLE properties ADD COLUMN logo_url TEXT`); } catch (_) {}
+  try { db.exec(`ALTER TABLE properties ADD COLUMN company_reg TEXT`); } catch (_) {}
+  try { db.exec(`ALTER TABLE properties ADD COLUMN bank_name TEXT`); } catch (_) {}
+  try { db.exec(`ALTER TABLE properties ADD COLUMN bank_account TEXT`); } catch (_) {}
+  try { db.exec(`ALTER TABLE properties ADD COLUMN bank_branch TEXT`); } catch (_) {}
+  try { db.exec(`ALTER TABLE properties ADD COLUMN swift_code TEXT`); } catch (_) {}
+  try { db.exec(`ALTER TABLE properties ADD COLUMN invoice_footer TEXT`); } catch (_) {}
+  try { db.exec(`ALTER TABLE properties ADD COLUMN quote_validity_days INTEGER DEFAULT 14`); } catch (_) {}
 
   // One-time seed flag — prevents re-inserting default room types after they've been deleted
   try { db.exec(`ALTER TABLE properties ADD COLUMN room_types_seeded INTEGER DEFAULT 0`); } catch (_) {}
