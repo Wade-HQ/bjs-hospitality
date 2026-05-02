@@ -380,15 +380,20 @@ export default function BookingDetail() {
             </div>
           </div>
 
-          {/* Meal Package */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Meal Package</label>
-            <select value={editForm.meal_package_id || ''} onChange={e => setEditForm(p => ({...p, meal_package_id: e.target.value}))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-              <option value="">Room Only</option>
-              {editMealPackages.map(mp => <option key={mp.id} value={mp.id}>{mp.name}</option>)}
-            </select>
-          </div>
+          {/* Legacy pricing fields — meal package shown only for bookings without a rate plan */}
+          {!editForm.rate_plan_id && (
+            <>
+              {/* Meal Package */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Meal Package</label>
+                <select value={editForm.meal_package_id || ''} onChange={e => setEditForm(p => ({...p, meal_package_id: e.target.value}))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="">Room Only</option>
+                  {editMealPackages.map(mp => <option key={mp.id} value={mp.id}>{mp.name}</option>)}
+                </select>
+              </div>
+            </>
+          )}
 
           {/* Rate Plan */}
           <div>
