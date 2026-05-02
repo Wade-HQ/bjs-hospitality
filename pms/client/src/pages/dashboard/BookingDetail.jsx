@@ -195,7 +195,7 @@ export default function BookingDetail() {
             {[
               ['Room', b.room_number ? `Room ${b.room_number}` : '—'],
               ['Type', b.room_type_name],
-              ['Region', b.region ? (b.region === 'sadc' ? 'SADC' : 'International') : '—'],
+              ...(b.rate_plan_id ? [['Rate Plan', `#${b.rate_plan_id}`]] : [['Region', b.region ? (b.region === 'sadc' ? 'SADC' : 'International') : '—']]),
               ['Check-in', b.check_in],
               ['Check-out', b.check_out],
               ['Nights', b.nights],
