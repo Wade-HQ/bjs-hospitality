@@ -821,24 +821,30 @@ router.post('/:id/swap-room', requireAuth, requireRole('owner','hotel_manager','
     .get(target_room_id, PROPERTY_ID());
   if (!targetRoom) return res.status(404).json({ error: 'Target room not found' });
 
-  const conflict = db.prepare(`
-    SELECT id, booking_ref FROM bookings
-    WHERE room_id = ? AND property_id = ? AND id != ?
-      AND status NOT IN ('cancelled','no_show','checked_out')
-      AND check_in < ? AND check_out > ?
-  `).get(target_room_id, PROPERTY_ID(), booking.id, booking.check_out, booking.check_in);
+  const doSwap = db.transaction(() => {
+    const conflict = db.prepare(`
+      SELECT id, booking_ref FROM bookings
+      WHERE room_id = ? AND property_id = ? AND id != ?
+        AND status NOT IN ('cancelled','no_show','checked_out')
+        AND check_in < ? AND check_out > ?
+    `).get(target_room_id, PROPERTY_ID(), booking.id, booking.check_out, booking.check_in);
+    if (conflict) return { conflict };
 
-  if (conflict) {
-    return res.status(409).json({ error: `Room already booked (${conflict.booking_ref}) for those dates` });
+    db.prepare('UPDATE bookings SET room_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(target_room_id, booking.id);
+
+    try {
+      db.prepare(`INSERT INTO booking_audit_log (booking_id, user_id, action, old_value, new_value) VALUES (?, ?, 'room_swapped', ?, ?)`)
+        .run(booking.id, req.user.id, String(booking.room_id), String(target_room_id));
+    } catch (e) { console.error('audit log write failed:', e.message); }
+
+    return { conflict: null };
+  });
+
+  const swapResult = doSwap();
+  if (swapResult.conflict) {
+    return res.status(409).json({ error: `Room already booked (${swapResult.conflict.booking_ref}) for those dates` });
   }
-
-  db.prepare('UPDATE bookings SET room_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-    .run(target_room_id, booking.id);
-
-  try {
-    db.prepare(`INSERT INTO booking_audit_log (booking_id, user_id, action, old_value, new_value) VALUES (?, ?, 'room_swapped', ?, ?)`)
-      .run(booking.id, req.user.id, String(booking.room_id), String(target_room_id));
-  } catch (_) {}
 
   const updated = getBookingById(db, booking.id);
   return res.json({ booking: updated, message: `Moved to room ${targetRoom.room_number || targetRoom.name}` });
