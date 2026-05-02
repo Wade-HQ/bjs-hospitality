@@ -75,6 +75,8 @@ function calculateRatePlan(db, params) {
     if (channelRow) {
       region = channelRow.base_region || 'sadc';
     }
+  } else if (params.region) {
+    region = params.region;
   }
 
   const isIntl = region === 'international';
