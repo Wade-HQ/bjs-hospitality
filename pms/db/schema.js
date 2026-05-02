@@ -395,6 +395,9 @@ async function runMigrations(db) {
     console.log(`[seed] Seeded room_type_rates for ${roomTypesWithoutRates.length} room types`);
   }
 
+  // Property column migrations
+  try { db.exec(`ALTER TABLE properties ADD COLUMN tax_inclusive INTEGER DEFAULT 1`); } catch (_) {}
+
   // One-time seed flag — prevents re-inserting default room types after they've been deleted
   try { db.exec(`ALTER TABLE properties ADD COLUMN room_types_seeded INTEGER DEFAULT 0`); } catch (_) {}
   // Mark existing properties as already seeded (the column was just added with DEFAULT 0,
