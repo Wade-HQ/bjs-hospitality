@@ -191,6 +191,8 @@ export default function BookingCalendar({ mode = 'booking', onNewBooking }) {
   };
 
   const handleBookingClick = async (bookingId) => {
+    setSwapMode(false);
+    setSwapRooms([]);
     try {
       const res = await api.get(`/api/bookings/${bookingId}`);
       setSelectedBooking(res.data.booking);
