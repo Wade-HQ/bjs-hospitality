@@ -440,10 +440,13 @@ async function runMigrations(db) {
   }
 
   // 3b. international_rate_settings — default 30% markup per property
-  db.exec(`
-    INSERT OR IGNORE INTO international_rate_settings (property_id, markup_percent) VALUES (1, 30), (2, 30)
-  `);
-  console.log('[seed] international_rate_settings seeded');
+  for (const propId of [1, 2]) {
+    const intlEmpty = db.prepare('SELECT COUNT(*) as c FROM international_rate_settings WHERE property_id = ?').get(propId);
+    if (intlEmpty.c === 0) {
+      db.prepare('INSERT OR IGNORE INTO international_rate_settings (property_id, markup_percent) VALUES (?, ?)').run(propId, 30);
+      console.log(`[seed] international_rate_settings seeded for property ${propId}`);
+    }
+  }
 
   // 3c. meal_components — from meal_packages
   for (const propId of [1, 2]) {
