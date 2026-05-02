@@ -426,7 +426,7 @@ function MealsTab() {
             {meals.map(m => (
               <tr key={m.id} className={`hover:bg-gray-50 ${!m.active ? 'opacity-50' : ''}`}>
                 <td className="px-4 py-3 font-medium text-primary">{m.name}</td>
-                <td className="px-4 py-3">{fmt(m.cost_per_person)}</td>
+                <td className="px-4 py-3">{fmt(m.cost_per_person, property?.currency)}</td>
                 <td className="px-4 py-3">
                   {m.active
                     ? <Badge label="Active" color="green" />
