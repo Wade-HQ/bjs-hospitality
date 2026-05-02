@@ -555,7 +555,7 @@ export default function BookingCalendar({ mode = 'booking', onNewBooking }) {
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-primary text-white">
               <h3 className="font-semibold">Booking Detail</h3>
-              <button onClick={() => setSidebarOpen(false)} className="text-white/70 hover:text-white text-xl">&times;</button>
+              <button onClick={() => { setSidebarOpen(false); setSwapMode(false); }} className="text-white/70 hover:text-white text-xl">&times;</button>
             </div>
 
             {/* Content */}
