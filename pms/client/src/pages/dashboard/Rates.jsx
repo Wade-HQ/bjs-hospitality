@@ -1560,10 +1560,10 @@ function PreviewTab() {
                 </div>
                 {plan.total_per_night ? (
                   <>
-                    <p className="text-2xl font-bold text-primary">{fmt(plan.total_per_night)}</p>
+                    <p className="text-2xl font-bold text-primary">{fmt(plan.total_per_night, property?.currency)}</p>
                     <p className="text-sm text-gray-500">per night</p>
                     {nights > 1 && plan.total_for_stay && (
-                      <p className="text-sm font-medium text-gray-700 mt-1">{fmt(plan.total_for_stay)} for {nights} nights</p>
+                      <p className="text-sm font-medium text-gray-700 mt-1">{fmt(plan.total_for_stay, property?.currency)} for {nights} nights</p>
                     )}
                   </>
                 ) : (
