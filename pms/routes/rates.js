@@ -299,7 +299,7 @@ router.put('/plans/:id', requireAuth, requireRole(...WRITE_ROLES), (req, res) =>
   ).get(req.params.id, pid);
   if (!existing) return res.status(404).json({ error: 'Rate plan not found' });
 
-  const { name, room_type_id, meal_components_json, visible_on_website, active, description } = req.body;
+  const { name, room_type_id, meal_components_json, visible_on_website, visible_on_backoffice, active, description } = req.body;
 
   if (meal_components_json !== undefined) {
     try {
