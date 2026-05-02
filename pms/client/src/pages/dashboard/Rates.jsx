@@ -1486,9 +1486,8 @@ function PreviewTab() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {results.map(plan => {
             const isHidden = !plan.visible_on_backoffice;
-            const hasSeasonUplift = plan.season_uplift_percent && Number(plan.season_uplift_percent) !== 0;
-            const perNight = plan.sadc_total || plan.rate_per_night || plan.total_per_person;
-            const total = perNight ? perNight * nights : null;
+            const season = plan.season_applied;
+            const hasSeasonUplift = season && Number(season.uplift_percent) !== 0;
 
             return (
               <div
@@ -1499,12 +1498,12 @@ function PreviewTab() {
                   <h4 className="font-semibold text-primary text-sm">{plan.name}</h4>
                   {isHidden && <Badge label="Hidden" color="gray" />}
                 </div>
-                {perNight ? (
+                {plan.total_per_night ? (
                   <>
-                    <p className="text-2xl font-bold text-primary">{fmt(perNight)}</p>
+                    <p className="text-2xl font-bold text-primary">{fmt(plan.total_per_night)}</p>
                     <p className="text-sm text-gray-500">per night</p>
-                    {nights > 1 && total && (
-                      <p className="text-sm font-medium text-gray-700 mt-1">{fmt(total)} for {nights} nights</p>
+                    {nights > 1 && plan.total_for_stay && (
+                      <p className="text-sm font-medium text-gray-700 mt-1">{fmt(plan.total_for_stay)} for {nights} nights</p>
                     )}
                   </>
                 ) : (
@@ -1512,7 +1511,7 @@ function PreviewTab() {
                 )}
                 {hasSeasonUplift && (
                   <p className="text-xs text-amber-600 mt-2">
-                    ↑ {plan.season_name} {Number(plan.season_uplift_percent) > 0 ? '+' : ''}{plan.season_uplift_percent}%
+                    ↑ {season.name} {Number(season.uplift_percent) > 0 ? '+' : ''}{season.uplift_percent}%
                   </p>
                 )}
                 <p className="text-xs text-gray-400 mt-2">VAT included</p>
