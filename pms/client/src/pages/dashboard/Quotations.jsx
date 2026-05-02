@@ -53,14 +53,15 @@ export default function Quotations() {
     const ci = new Date(check_in), co = new Date(check_out);
     if (co <= ci) return;
     const nights = Math.max(1, Math.round((co - ci) / 86400000));
-    const params = new URLSearchParams({ room_type_id, check_in, adults, children: children || 0, nights });
+    const params = new URLSearchParams({ room_type_id, check_in, adults, children: children || 0, nights, region: form.region || 'sadc' });
     api.get(`/api/rates/calculate?${params}`)
       .then(r => {
         const plans = r.data?.rate_plans || [];
         setRatePlans(plans);
+        setRateErrors(r.data?.calc_errors || []);
         if (plans.length === 1) setForm(p => ({ ...p, rate_plan_id: String(plans[0].id) }));
       })
-      .catch(() => setRatePlans([]));
+      .catch(() => { setRatePlans([]); setRateErrors([]); });
   }, [form.room_type_id, form.check_in, form.check_out, form.adults, form.children]);
 
   useEffect(() => {
