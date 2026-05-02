@@ -122,11 +122,41 @@ router.delete('/:id', requireAuth, requireRole('owner','hotel_manager'), (req, r
     .get(req.params.id, PROPERTY_ID());
   if (!existing) return res.status(404).json({ error: 'Room type not found' });
 
-  // Null out room_type_id on any rooms that reference this type before deleting
-  db.prepare('UPDATE rooms SET room_type_id = NULL WHERE room_type_id = ? AND property_id = ?')
-    .run(req.params.id, PROPERTY_ID());
+  const id = req.params.id;
+  const pid = PROPERTY_ID();
 
-  db.prepare('DELETE FROM room_types WHERE id = ? AND property_id = ?').run(req.params.id, PROPERTY_ID());
+  // Full cascade inside a transaction — FKs are ON so order matters
+  db.transaction(() => {
+    // 1. Remove channel_rate_plans for rate_plans belonging to this room type
+    db.prepare(`DELETE FROM channel_rate_plans WHERE rate_plan_id IN (
+      SELECT id FROM rate_plans WHERE room_type_id = ? AND property_id = ?
+    )`).run(id, pid);
+
+    // 2. Null out rate_plan_id in quotations and bookings for these rate plans
+    db.prepare(`UPDATE quotations SET rate_plan_id = NULL WHERE rate_plan_id IN (
+      SELECT id FROM rate_plans WHERE room_type_id = ? AND property_id = ?
+    )`).run(id, pid);
+    db.prepare(`UPDATE bookings SET rate_plan_id = NULL WHERE rate_plan_id IN (
+      SELECT id FROM rate_plans WHERE room_type_id = ? AND property_id = ?
+    ) AND property_id = ?`).run(id, pid, pid);
+
+    // 3. Hard-delete rate_plans for this room type
+    db.prepare('DELETE FROM rate_plans WHERE room_type_id = ? AND property_id = ?').run(id, pid);
+
+    // 4. Delete room_base_rates for this room type
+    db.prepare('DELETE FROM room_base_rates WHERE room_type_id = ? AND property_id = ?').run(id, pid);
+
+    // 5. Null out room_type_id references in bookings and quotations
+    db.prepare('UPDATE bookings SET room_type_id = NULL WHERE room_type_id = ? AND property_id = ?').run(id, pid);
+    db.prepare('UPDATE quotations SET room_type_id = NULL WHERE room_type_id = ? AND property_id = ?').run(id, pid);
+
+    // 6. Null out rooms
+    db.prepare('UPDATE rooms SET room_type_id = NULL WHERE room_type_id = ? AND property_id = ?').run(id, pid);
+
+    // 7. Delete the room type
+    db.prepare('DELETE FROM room_types WHERE id = ? AND property_id = ?').run(id, pid);
+  })();
+
   return res.json({ ok: true });
 });
 
