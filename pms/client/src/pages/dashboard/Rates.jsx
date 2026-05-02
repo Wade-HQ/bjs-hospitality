@@ -501,6 +501,7 @@ function MealsTab() {
 
 function PlansTab() {
   const { addToast } = useToast();
+  const { property } = useProperty();
   const [plans, setPlans] = useState([]);
   const [meals, setMeals] = useState([]);
   const [roomTypes, setRoomTypes] = useState([]);
