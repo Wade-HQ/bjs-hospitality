@@ -78,8 +78,6 @@ export default function BookingDetail() {
       room_id: String(b.room_id || ''),
       adults: b.adults,
       children: b.children || 0,
-      region: b.region || 'international',
-      meal_package_id: b.meal_package_id ? String(b.meal_package_id) : '',
       rate_plan_id: b.rate_plan_id ? String(b.rate_plan_id) : '',
       guest_id: b.guest_id,
       guest_name: `${b.first_name} ${b.last_name}`,
@@ -90,13 +88,9 @@ export default function BookingDetail() {
     setGuestResults([]);
     setEditPreview(null);
     setEditRatePlans([]);
-    Promise.all([
-      api.get('/api/room-types'),
-      api.get('/api/meal-packages'),
-    ]).then(([rtRes, mpRes]) => {
-      setEditRoomTypes(rtRes.data?.room_types || []);
-      setEditMealPackages(mpRes.data?.meal_packages || []);
-    }).catch(() => addToast('Failed to load room options', 'error'));
+    api.get('/api/room-types')
+      .then(rtRes => setEditRoomTypes(rtRes.data?.room_types || []))
+      .catch(() => addToast('Failed to load room options', 'error'));
     setEditModal(true);
   };
 
