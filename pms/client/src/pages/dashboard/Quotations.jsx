@@ -116,7 +116,7 @@ export default function Quotations() {
       addToast(`Quotation ${saved.data.quotation.quote_ref} saved & downloaded`);
       loadQuotations();
       // Reset form
-      setForm({ check_in: '', check_out: '', room_type_id: '', adults: 1, children: 0, rate_plan_id: '', guest_name: '', guest_email: '', guest_phone: '', special_requests: '' });
+      setForm({ check_in: '', check_out: '', room_type_id: '', adults: 1, children: 0, rate_plan_id: '', region: 'sadc', guest_name: '', guest_email: '', guest_phone: '', special_requests: '' });
       setPreview(null);
     } catch (e) {
       addToast(e.response?.data?.error || 'Error generating quotation', 'error');
