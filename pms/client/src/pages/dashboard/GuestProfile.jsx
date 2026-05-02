@@ -25,7 +25,7 @@ export default function GuestProfile() {
     });
     api.get('/api/bookings', { params: { guest_id: id } }).then(r => setBookings(r.data.bookings || []));
   };
-  useEffect(load, [id]);
+  useEffect(() => { load(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
     try { await api.put(`/api/guests/${id}`, form); addToast('Guest updated'); setEditing(false); load(); }
