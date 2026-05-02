@@ -320,20 +320,22 @@ router.put('/plans/:id', requireAuth, requireRole(...WRITE_ROLES), (req, res) =>
 
   db.prepare(`
     UPDATE rate_plans SET
-      name                 = COALESCE(?, name),
-      room_type_id         = COALESCE(?, room_type_id),
-      meal_components_json = COALESCE(?, meal_components_json),
-      visible_on_website   = COALESCE(?, visible_on_website),
-      active               = COALESCE(?, active),
-      description          = COALESCE(?, description)
+      name                   = COALESCE(?, name),
+      room_type_id           = COALESCE(?, room_type_id),
+      meal_components_json   = COALESCE(?, meal_components_json),
+      visible_on_website     = COALESCE(?, visible_on_website),
+      visible_on_backoffice  = COALESCE(?, visible_on_backoffice),
+      active                 = COALESCE(?, active),
+      description            = COALESCE(?, description)
     WHERE id = ? AND property_id = ?
   `).run(
-    name                !== undefined ? name.trim()                    : null,
-    room_type_id        !== undefined ? room_type_id                   : null,
-    meal_components_json !== undefined ? meal_components_json          : null,
-    visible_on_website  !== undefined ? (visible_on_website ? 1 : 0)  : null,
-    active              !== undefined ? (active ? 1 : 0)              : null,
-    description         !== undefined ? description                    : null,
+    name                   !== undefined ? name.trim()                       : null,
+    room_type_id           !== undefined ? room_type_id                      : null,
+    meal_components_json   !== undefined ? meal_components_json              : null,
+    visible_on_website     !== undefined ? (visible_on_website ? 1 : 0)     : null,
+    visible_on_backoffice  !== undefined ? (visible_on_backoffice ? 1 : 0)  : null,
+    active                 !== undefined ? (active ? 1 : 0)                 : null,
+    description            !== undefined ? description                       : null,
     req.params.id, pid
   );
 
