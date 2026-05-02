@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api/index.js';
 import Modal from '../../components/Modal.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
+import { useProperty } from '../../contexts/PropertyContext.jsx';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
