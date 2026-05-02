@@ -96,7 +96,14 @@ export default function GuestProfile() {
               {fields.map(f => (
                 <div key={f.k}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{f.l}</label>
-                  <input type={f.t||'text'} value={form[f.k]||''} onChange={e => setForm(p=>({...p,[f.k]:e.target.value}))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  {f.t === 'select' ? (
+                    <select value={form[f.k]||''} onChange={e => setForm(p=>({...p,[f.k]:e.target.value}))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                      <option value="">Select…</option>
+                      {f.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  ) : (
+                    <input type={f.t||'text'} value={form[f.k]||''} onChange={e => setForm(p=>({...p,[f.k]:e.target.value}))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  )}
                 </div>
               ))}
               <div>
