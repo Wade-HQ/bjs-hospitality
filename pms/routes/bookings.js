@@ -477,8 +477,9 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
       room_rate, meal_package_id, meal_total, extras_json,
       subtotal, tax_amount, tax_rate, discount_amount, total_amount,
       currency, commission_rate, commission_amount, net_to_property,
-      status, payment_status, special_requests, internal_notes, channel_booking_ref, region
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      status, payment_status, special_requests, internal_notes, channel_booking_ref, region,
+      rate_plan_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     bookingRef, source, PROPERTY_ID(),
     resolvedRoomId || null, resolvedRoomTypeId || null, resolvedGuestId,
@@ -495,7 +496,8 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
     'confirmed', 'unpaid',
     special_requests || null, internal_notes || null,
     channel_booking_ref || null,
-    region || 'international'
+    rate_plan_id ? null : (region || 'international'),
+    rate_plan_id ? parseInt(rate_plan_id) : null
   );
 
   const newBookingId = bookingResult.lastInsertRowid;
