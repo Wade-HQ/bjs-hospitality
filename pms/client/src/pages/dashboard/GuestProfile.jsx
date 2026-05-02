@@ -14,7 +14,7 @@ export default function GuestProfile() {
   const [form, setForm] = useState({});
 
   const load = () => {
-    api.get(`/api/guests/${id}`).then(r => { setGuest(r.data); setForm(r.data); });
+    api.get(`/api/guests/${id}`).then(r => { setGuest(r.data.guest); setForm(r.data.guest); });
     api.get('/api/bookings', { params: { guest_id: id } }).then(r => setBookings(r.data.bookings || []));
   };
   useEffect(load, [id]);
