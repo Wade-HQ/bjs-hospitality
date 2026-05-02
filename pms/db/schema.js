@@ -504,16 +504,14 @@ async function runMigrations(db) {
   }
 
   // 3f. rate_plans — "Room Only" plan for every room type
-  {
-    const emptyCheck = db.prepare('SELECT COUNT(*) as c FROM rate_plans').get();
-    if (emptyCheck.c === 0) {
-      db.exec(`
-        INSERT OR IGNORE INTO rate_plans (property_id, room_type_id, name, meal_components_json, sort_order)
-        SELECT rt.property_id, rt.id, 'Room Only', '[]', 0
-        FROM room_types rt
-        WHERE rt.id NOT IN (SELECT DISTINCT room_type_id FROM rate_plans)
-      `);
-      console.log('[seed] rate_plans seeded with Room Only plans for all room types');
+  for (const propId of [1, 2]) {
+    const plansEmpty = db.prepare('SELECT COUNT(*) as c FROM rate_plans WHERE property_id = ?').get(propId);
+    if (plansEmpty.c === 0) {
+      const roomTypesForProp = db.prepare('SELECT id, name FROM room_types WHERE property_id = ?').all(propId);
+      for (const rt of roomTypesForProp) {
+        db.prepare(`INSERT OR IGNORE INTO rate_plans (property_id, room_type_id, name, meal_components_json, sort_order) VALUES (?, ?, 'Room Only', '[]', 0)`).run(propId, rt.id);
+      }
+      if (roomTypesForProp.length > 0) console.log(`[seed] rate_plans seeded for property ${propId}: ${roomTypesForProp.length} Room Only plans`);
     }
   }
 
