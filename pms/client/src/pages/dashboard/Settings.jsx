@@ -40,10 +40,15 @@ const BED_OPTIONS = [
 ];
 
 const AMENITIES = [
-  'WiFi', 'Air Conditioning', 'Ceiling Fan', 'Private Bathroom (En Suite)',
-  'Outdoor Shower', 'Private Deck / Balcony', 'Sea View', 'Bush View',
-  'Kitchenette', 'Mini-Fridge', 'Coffee & Tea', 'Safe',
-  'Mosquito Net', 'Braai / BBQ', 'Fire Pit', 'Pool Access',
+  'WiFi', 'Air Conditioning', 'Ceiling Fan',
+  'Private Bathroom (En Suite)', 'Outdoor Shower',
+  'Toilet', 'Shower', 'Towel', 'Soap', 'Toilet Paper',
+  'Private Deck / Balcony', 'Sea View', 'Bush View',
+  'Kettle', 'Coffee & Tea', 'Microwave',
+  'Kitchenette', 'Crockery', 'Cutlery', 'Pots', 'Scullery',
+  'Mini-Fridge', 'Mosquito Net',
+  'Braai / BBQ', 'Fire Pit', 'Pool Access',
+  'Wheelchair Accessible',
 ];
 
 const EMPTY_ROOM = {
