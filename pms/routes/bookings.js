@@ -177,17 +177,48 @@ router.get('/', requireAuth, (req, res) => {
 // GET /api/bookings/price-preview
 router.get('/price-preview', requireAuth, (req, res) => {
   const db = getDb();
-  const { room_type_id, region, check_in, check_out, adults, children, meal_package_id } = req.query;
+  const { room_type_id, region, check_in, check_out, adults, children, meal_package_id, rate_plan_id } = req.query;
 
   const empty = { adjusted_rate: 0, accommodation_subtotal: 0, meal_total: 0, subtotal: 0, tax_amount: 0, total_amount: 0, season_name: null };
 
-  if (!room_type_id || !check_in || !check_out || !adults) return res.json(empty);
+  if (!check_in || !check_out || !adults) return res.json(empty);
 
   const ciDate = new Date(check_in);
   const coDate = new Date(check_out);
   if (isNaN(ciDate) || isNaN(coDate) || coDate <= ciDate) return res.json(empty);
 
-  const nights = Math.round((coDate - ciDate) / (1000 * 60 * 60 * 24));
+  const nights = Math.max(1, Math.round((coDate - ciDate) / (1000 * 60 * 60 * 24)));
+
+  // New rate plan path
+  if (rate_plan_id) {
+    try {
+      const result = calculateRatePlan(db, {
+        property_id: PROPERTY_ID(),
+        rate_plan_id: parseInt(rate_plan_id),
+        adults: parseInt(adults),
+        children: parseInt(children || 0),
+        nights,
+        check_in,
+      });
+      const property = db.prepare('SELECT tax_rate FROM properties WHERE id = ?').get(PROPERTY_ID());
+      const taxRate = property?.tax_rate || 0;
+      const taxAmount = Math.round(result.total_for_stay * (taxRate / 100));
+      return res.json({
+        ...result,
+        accommodation_subtotal: result.total_for_stay - result.meal_total_per_night * nights,
+        meal_total: result.meal_total_per_night * nights,
+        subtotal: result.total_for_stay,
+        tax_amount: taxAmount,
+        total_amount: result.total_for_stay + taxAmount,
+        season_name: result.season_applied?.name || null,
+      });
+    } catch (e) {
+      return res.json(empty);
+    }
+  }
+
+  // Legacy path: region + meal_package_id
+  if (!room_type_id) return res.json(empty);
 
   try {
     const result = calculateBookingPrice(db, {
