@@ -331,15 +331,20 @@ export default function BookingDetail() {
             ))}
           </div>
 
-          {/* Region */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
-            <select value={editForm.region || 'international'} onChange={e => setEditForm(p => ({...p, region: e.target.value}))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-              <option value="international">International</option>
-              <option value="sadc">SADC</option>
-            </select>
-          </div>
+          {/* Legacy pricing fields — shown only for bookings without a rate plan */}
+          {!editForm.rate_plan_id && (
+            <>
+              {/* Region */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+                <select value={editForm.region || 'international'} onChange={e => setEditForm(p => ({...p, region: e.target.value}))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="international">International</option>
+                  <option value="sadc">SADC</option>
+                </select>
+              </div>
+            </>
+          )}
 
           {/* Room Type */}
           <div>
