@@ -54,6 +54,9 @@ export default function BookingCalendar({ mode = 'booking', onNewBooking }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [newBookingModal, setNewBookingModal] = useState(null); // { room, date }
   const [actionLoading, setActionLoading] = useState(false);
+  const [swapMode, setSwapMode] = useState(false);
+  const [swapRooms, setSwapRooms] = useState([]);
+  const [swapLoading, setSwapLoading] = useState(false);
 
   const startDate = viewMode === 'month'
     ? new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
