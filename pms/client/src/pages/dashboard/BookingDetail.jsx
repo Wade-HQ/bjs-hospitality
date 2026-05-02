@@ -64,6 +64,7 @@ export default function BookingDetail() {
       children: b.children || 0,
       region: b.region || 'international',
       meal_package_id: b.meal_package_id ? String(b.meal_package_id) : '',
+      rate_plan_id: b.rate_plan_id ? String(b.rate_plan_id) : '',
       guest_id: b.guest_id,
       guest_name: `${b.first_name} ${b.last_name}`,
       special_requests: b.special_requests || '',
@@ -72,6 +73,7 @@ export default function BookingDetail() {
     setGuestSearch('');
     setGuestResults([]);
     setEditPreview(null);
+    setEditRatePlans([]);
     Promise.all([
       api.get('/api/room-types'),
       api.get('/api/meal-packages'),
