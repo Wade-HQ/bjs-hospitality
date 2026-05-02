@@ -132,6 +132,7 @@ function calculateRatePlan(db, params) {
   let totalPerNight  = subtotalPerNight;
 
   if (season) {
+    // Channel context takes priority: channel bookings use applies_to_channels regardless of region
     // Determine if the season applies to this booking's region/channel context
     let seasonApplies = false;
     if (channel_id != null && channelRow) {
