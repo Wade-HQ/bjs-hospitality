@@ -19,12 +19,16 @@ export default function BookingDetail() {
   const [editForm, setEditForm] = useState({});
   const [editRoomTypes, setEditRoomTypes] = useState([]);
   const [editRooms, setEditRooms] = useState([]);
-  const [editMealPackages, setEditMealPackages] = useState([]);
   const [editRatePlans, setEditRatePlans] = useState([]);
   const [editPreview, setEditPreview] = useState(null);
   const [editPreviewLoading, setEditPreviewLoading] = useState(false);
   const [guestSearch, setGuestSearch] = useState('');
   const [guestResults, setGuestResults] = useState([]);
+
+  const [documents, setDocuments] = useState([]);
+  const [docUploading, setDocUploading] = useState(false);
+  const [docType, setDocType] = useState('passport');
+  const fileInputRef = useRef(null);
 
   const load = () => { api.get(`/api/bookings/${id}`).then(r => setBooking(r.data)).finally(() => setLoading(false)); };
   useEffect(load, [id]);
