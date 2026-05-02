@@ -148,7 +148,7 @@ router.get('/meals', requireAuth, (req, res) => {
 router.post('/meals', requireAuth, requireRole(...WRITE_ROLES), (req, res) => {
   const db = getDb();
   const pid = PROPERTY_ID();
-  const { name, cost_per_person, description, active = 1 } = req.body;
+  const { name, cost_per_person, notes, active = 1 } = req.body;
 
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'name is required' });
@@ -159,9 +159,9 @@ router.post('/meals', requireAuth, requireRole(...WRITE_ROLES), (req, res) => {
   }
 
   const result = db.prepare(`
-    INSERT INTO meal_components (property_id, name, cost_per_person, description, active)
+    INSERT INTO meal_components (property_id, name, cost_per_person, notes, active)
     VALUES (?, ?, ?, ?, ?)
-  `).run(pid, name.trim(), cost, description || null, active ? 1 : 0);
+  `).run(pid, name.trim(), cost, notes || null, active ? 1 : 0);
 
   const meal = db.prepare('SELECT * FROM meal_components WHERE id = ?').get(result.lastInsertRowid);
   return res.status(201).json({ meal_component: meal });
