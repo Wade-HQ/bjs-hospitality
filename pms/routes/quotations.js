@@ -247,15 +247,15 @@ router.post('/:id/convert', requireAuth, requireRole(...WRITE_ROLES), (req, res)
         room_rate, meal_total, extras_json,
         subtotal, tax_amount, tax_rate, discount_amount, total_amount,
         currency, commission_rate, commission_amount, net_to_property,
-        status, payment_status, special_requests, rate_plan_id
-      ) VALUES (?, 'direct', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, '[]', ?, ?, ?, 0, ?, ?, 0, 0, ?, 'provisional', 'unpaid', ?, ?)
+        status, payment_status, special_requests, rate_plan_id, region
+      ) VALUES (?, 'direct', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, '[]', ?, ?, ?, 0, ?, ?, 0, 0, ?, 'provisional', 'unpaid', ?, ?, ?)
     `).run(
       bookingRef, PROPERTY_ID(), quote.room_type_id, guestId,
       quote.check_in, quote.check_out, quote.nights, quote.adults, quote.children,
       quote.total_per_night, quote.total_for_stay,
       quote.tax_amount, property?.tax_rate || 0,
       quote.total_amount, quote.currency, quote.total_amount,
-      quote.special_requests || null, quote.rate_plan_id
+      quote.special_requests || null, quote.rate_plan_id, quote.region || 'sadc'
     );
 
     const bookingId = bookingResult.lastInsertRowid;
