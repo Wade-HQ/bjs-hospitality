@@ -653,6 +653,7 @@ router.get('/calculate', requireAuth, (req, res) => {
   ).all(pid, room_type_id);
 
   const results = [];
+  const calcErrors = [];
   for (const plan of activePlans) {
     try {
       const calculated = calculateRatePlan(db, {
@@ -663,15 +664,19 @@ router.get('/calculate', requireAuth, (req, res) => {
         nights:       parseInt(nights),
         check_in,
         channel_id:   channel_id != null ? parseInt(channel_id) : null,
+        region:       req.query.region || undefined,
       });
       results.push({ ...plan, ...calculated });
     } catch (err) {
       console.error(`calculateRatePlan error for plan ${plan.id} (${plan.name}):`, err.message);
-      // Skip plans that throw
+      calcErrors.push({ plan_id: plan.id, plan_name: plan.name, error: err.message });
     }
   }
 
-  return res.json({ rate_plans: results });
+  return res.json({
+    rate_plans: results,
+    calc_errors: calcErrors.length > 0 ? calcErrors : undefined,
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
