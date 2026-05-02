@@ -18,6 +18,7 @@ import GuestProfile from './pages/dashboard/GuestProfile.jsx';
 import Invoices from './pages/dashboard/Invoices.jsx';
 import Availability from './pages/dashboard/Availability.jsx';
 import Reports from './pages/dashboard/Reports.jsx';
+import Rates from './pages/dashboard/Rates.jsx';
 import Settings from './pages/dashboard/Settings.jsx';
 
 function ProtectedLayout() {
