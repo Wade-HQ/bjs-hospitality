@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../api/index.js';
 
-const PropertyContext = createContext(null);
+const PropertyContext = createContext({ property: null, loading: true, setProperty: () => {}, reload: () => {} });
 
 export function PropertyProvider({ children }) {
   const [property, setProperty] = useState(null);
