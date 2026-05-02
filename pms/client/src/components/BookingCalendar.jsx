@@ -551,6 +551,13 @@ export default function BookingCalendar({ mode = 'booking', onNewBooking }) {
                 )}
               </div>
 
+              {selectedBooking.special_requests && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+                  <div className="text-xs font-semibold text-amber-700 mb-1">Special Requests</div>
+                  <div className="text-amber-800">{selectedBooking.special_requests}</div>
+                </div>
+              )}
+
               <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Total</span>
