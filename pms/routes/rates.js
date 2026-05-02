@@ -494,14 +494,18 @@ router.get('/channels', requireAuth, (req, res) => {
 router.post('/channels', requireAuth, requireRole(...WRITE_ROLES), (req, res) => {
   const db = getDb();
   const pid = PROPERTY_ID();
-  const { name, markup_percent = 0, base_region = 'sadc', active = 1, description } = req.body;
+  const { name, type = 'ota', markup_percent = 0, base_region = 'sadc', currency = 'ZAR', active = 1, notes } = req.body;
 
   if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });
 
+  const VALID_TYPES = ['ota', 'agent', 'seo', 'direct'];
+  const normalizedType = VALID_TYPES.includes(type) ? type : 'ota';
+  const normalizedRegion = (base_region || 'sadc').toLowerCase();
+
   const result = db.prepare(`
-    INSERT INTO channels (property_id, name, markup_percent, base_region, active, description)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(pid, name.trim(), parseFloat(markup_percent), base_region, active ? 1 : 0, description || null);
+    INSERT INTO channels (property_id, name, type, markup_percent, base_region, currency, active, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(pid, name.trim(), normalizedType, parseFloat(markup_percent), normalizedRegion, currency || 'ZAR', active ? 1 : 0, notes || null);
 
   const channel = db.prepare('SELECT * FROM channels WHERE id = ?').get(result.lastInsertRowid);
   return res.status(201).json({ channel });
