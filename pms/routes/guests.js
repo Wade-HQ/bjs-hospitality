@@ -237,7 +237,7 @@ router.get('/:id/documents/:doc_id/download', requireAuth, (req, res) => {
   }
 
   res.setHeader('Content-Disposition', `attachment; filename="${doc.file_name}"; filename*=UTF-8''${encodeURIComponent(doc.file_name)}`);
-  res.sendFile(doc.file_path);
+  res.sendFile(doc.file_path, { root: '/' });
 });
 
 module.exports = router;
