@@ -404,4 +404,33 @@ router.get('/guests', requireAuth, (req, res) => {
   });
 });
 
+// GET /api/reports/cancelled?from=&to=
+router.get('/cancelled', requireAuth, (req, res) => {
+  const db = getDb();
+  const now = new Date();
+  const from = req.query.from || `${now.getFullYear()}-01-01`;
+  const to = req.query.to || now.toISOString().slice(0, 10);
+
+  const rows = db.prepare(`
+    SELECT b.id, b.booking_ref, b.source, b.check_in, b.check_out, b.nights,
+           b.adults, b.children, b.status, b.payment_status,
+           b.total_amount, b.currency, b.updated_at,
+           g.first_name, g.last_name,
+           (g.first_name || ' ' || COALESCE(g.last_name, '')) as guest_name,
+           r.room_number, r.name as room_name,
+           rt.name as room_type_name
+    FROM bookings b
+    LEFT JOIN guests g ON g.id = b.guest_id
+    LEFT JOIN rooms r ON r.id = b.room_id
+    LEFT JOIN room_types rt ON rt.id = b.room_type_id
+    WHERE b.property_id = ?
+      AND b.status IN ('cancelled','no_show')
+      AND b.check_in >= ? AND b.check_in <= ?
+    ORDER BY b.updated_at DESC
+    LIMIT 500
+  `).all(PROPERTY_ID(), from, to);
+
+  return res.json({ bookings: rows, count: rows.length });
+});
+
 module.exports = router;
