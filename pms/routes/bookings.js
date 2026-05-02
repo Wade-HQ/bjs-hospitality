@@ -564,14 +564,14 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
     try {
       const pricing = calculateBookingPrice(db, {
         property_id: PROPERTY_ID(),
-        room_type_id: existing.room_type_id,
-        region: existing.region || 'international',
+        room_type_id: room_type_id || existing.room_type_id,
+        region: region !== undefined ? region : (existing.region || 'international'),
         check_in: newCheckIn,
         check_out: newCheckOut,
         nights,
         adults: parseInt(adults !== undefined ? adults : existing.adults),
         children: parseInt(children !== undefined ? children : existing.children),
-        meal_package_id: existing.meal_package_id,
+        meal_package_id: meal_package_id !== undefined ? meal_package_id : existing.meal_package_id,
       });
       subtotal = pricing.accommodation_subtotal + pricing.meal_total + extrasTotal - disc;
       const taxRate = existing.tax_rate || 0;
