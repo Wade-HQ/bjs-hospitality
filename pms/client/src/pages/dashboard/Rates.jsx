@@ -331,6 +331,7 @@ function BaseRatesTab() {
 
 function MealsTab() {
   const { addToast } = useToast();
+  const { property } = useProperty();
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
