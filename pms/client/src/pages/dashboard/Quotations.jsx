@@ -72,7 +72,7 @@ export default function Quotations() {
     const timer = setTimeout(async () => {
       setPreviewLoading(true);
       try {
-        const params = new URLSearchParams({ rate_plan_id, check_in, check_out, adults, children: children || 0 });
+        const params = new URLSearchParams({ rate_plan_id, check_in, check_out, adults, children: children || 0, region: form.region || 'sadc' });
         const r = await api.get(`/api/bookings/price-preview?${params}`);
         setPreview(r.data);
       } catch { setPreview(null); }
