@@ -52,6 +52,61 @@ export default function BookingDetail() {
     } catch (e) { addToast('Failed to generate invoice', 'error'); }
   };
 
+  const openEditModal = () => {
+    const b = booking.booking;
+    setEditForm({
+      check_in: b.check_in,
+      check_out: b.check_out,
+      room_type_id: String(b.room_type_id || ''),
+      room_id: String(b.room_id || ''),
+      adults: b.adults,
+      children: b.children || 0,
+      region: b.region || 'international',
+      meal_package_id: b.meal_package_id ? String(b.meal_package_id) : '',
+      guest_id: b.guest_id,
+      guest_name: `${b.first_name} ${b.last_name}`,
+      special_requests: b.special_requests || '',
+      source: b.source || 'direct',
+    });
+    setGuestSearch('');
+    setGuestResults([]);
+    setEditPreview(null);
+    Promise.all([
+      api.get('/api/room-types'),
+      api.get('/api/meal-packages'),
+    ]).then(([rtRes, mpRes]) => {
+      setEditRoomTypes(rtRes.data?.room_types || []);
+      setEditMealPackages(mpRes.data?.meal_packages || []);
+    });
+    setEditModal(true);
+  };
+
+  const saveEdit = async () => {
+    setUpdating(true);
+    try {
+      await api.put(`/api/bookings/${id}`, {
+        check_in: editForm.check_in,
+        check_out: editForm.check_out,
+        room_type_id: editForm.room_type_id || null,
+        room_id: editForm.room_id || null,
+        adults: Number(editForm.adults),
+        children: Number(editForm.children || 0),
+        region: editForm.region,
+        meal_package_id: editForm.meal_package_id || null,
+        guest_id: editForm.guest_id,
+        special_requests: editForm.special_requests || null,
+        source: editForm.source,
+      });
+      addToast('Booking updated');
+      setEditModal(false);
+      load();
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Error updating booking', 'error');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   if (loading) return <div className="p-12 text-center text-gray-400">Loading…</div>;
   if (!booking?.booking) return <div className="p-12 text-center text-gray-400">Not found</div>;
 
