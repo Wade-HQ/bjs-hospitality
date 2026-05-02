@@ -619,38 +619,63 @@ export default function BookingCalendar({ mode = 'booking', onNewBooking }) {
 
             {/* Action Buttons */}
             <div className="p-4 border-t border-gray-200 space-y-2">
-              {selectedBooking.status === 'confirmed' || selectedBooking.status === 'provisional' ? (
-                <button
-                  onClick={handleCheckIn}
-                  disabled={actionLoading}
-                  className="w-full py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
-                >
-                  Check In
-                </button>
-              ) : null}
-              {selectedBooking.status === 'checked_in' ? (
-                <button
-                  onClick={handleCheckOut}
-                  disabled={actionLoading}
-                  className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                >
-                  Check Out
-                </button>
-              ) : null}
-              <button
-                onClick={() => navigate(`/dashboard/bookings/${selectedBooking.id}`)}
-                className="w-full py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-              >
-                View Full Detail
-              </button>
-              {selectedBooking.status !== 'cancelled' && selectedBooking.status !== 'checked_out' && (
-                <button
-                  onClick={handleCancel}
-                  disabled={actionLoading}
-                  className="w-full py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-50 transition-colors"
-                >
-                  Cancel Booking
-                </button>
+              {swapMode ? (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-primary">Move to Room</span>
+                    <button onClick={() => setSwapMode(false)} className="text-xs text-gray-400 hover:text-gray-600">← Back</button>
+                  </div>
+                  {swapRooms.filter(r => r.id !== selectedBooking.room_id).length === 0 ? (
+                    <div className="text-xs text-gray-400 text-center py-3">No other rooms available for these dates</div>
+                  ) : (
+                    <div className="max-h-48 overflow-y-auto space-y-1">
+                      {swapRooms
+                        .filter(r => r.id !== selectedBooking.room_id)
+                        .map(r => (
+                          <button
+                            key={r.id}
+                            onClick={() => handleSwapRoom(r.id, r.room_number || r.name)}
+                            disabled={actionLoading}
+                            className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-teal-50 border border-gray-200 rounded-lg text-sm transition-colors disabled:opacity-50"
+                          >
+                            <span className="font-medium">{r.room_number || r.name}</span>
+                            <span className="text-xs text-gray-400">{r.room_type_name}</span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {(selectedBooking.status === 'confirmed' || selectedBooking.status === 'provisional') && (
+                    <button onClick={handleCheckIn} disabled={actionLoading}
+                      className="w-full py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors">
+                      Check In
+                    </button>
+                  )}
+                  {selectedBooking.status === 'checked_in' && (
+                    <button onClick={handleCheckOut} disabled={actionLoading}
+                      className="w-full py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                      Check Out
+                    </button>
+                  )}
+                  <button onClick={() => navigate(`/dashboard/bookings/${selectedBooking.id}`)}
+                    className="w-full py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                    View Full Detail
+                  </button>
+                  {selectedBooking.status !== 'cancelled' && selectedBooking.status !== 'checked_out' && (
+                    <button onClick={openSwapMode} disabled={swapLoading}
+                      className="w-full py-2 border border-gray-300 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                      {swapLoading ? 'Loading rooms…' : '⇄ Swap Room'}
+                    </button>
+                  )}
+                  {selectedBooking.status !== 'cancelled' && selectedBooking.status !== 'checked_out' && (
+                    <button onClick={handleCancel} disabled={actionLoading}
+                      className="w-full py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-50 transition-colors">
+                      Cancel Booking
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
