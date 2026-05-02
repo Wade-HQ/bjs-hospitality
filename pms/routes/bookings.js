@@ -525,11 +525,15 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
   } = req.body;
 
   if (guest_id !== undefined) {
-    const guestExists = db.prepare('SELECT id FROM guests WHERE id = ?').get(guest_id);
+    const guestExists = db.prepare('SELECT id FROM guests WHERE id = ? AND property_id = ?').get(guest_id, PROPERTY_ID());
     if (!guestExists) return res.status(400).json({ error: 'Guest not found' });
   }
   if (region !== undefined && !['international', 'sadc'].includes(region)) {
     return res.status(400).json({ error: 'region must be international or sadc' });
+  }
+  const VALID_SOURCES = ['direct', 'ota_internal', 'booking_com', 'airbnb', 'expedia', 'google'];
+  if (source !== undefined && source !== null && source !== '' && !VALID_SOURCES.includes(source)) {
+    return res.status(400).json({ error: `source must be one of: ${VALID_SOURCES.join(', ')}` });
   }
 
   // If changing dates or room, check availability
@@ -550,7 +554,9 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
   let totalAmount = existing.total_amount;
   let nights = existing.nights;
 
-  if (check_in || check_out || discount_amount !== undefined || extras_json !== undefined) {
+  if (check_in || check_out || discount_amount !== undefined || extras_json !== undefined ||
+      region !== undefined || meal_package_id !== undefined ||
+      adults !== undefined || children !== undefined) {
     const ciDate = new Date(newCheckIn);
     const coDate = new Date(newCheckOut);
     nights = Math.round((coDate - ciDate) / (1000 * 60 * 60 * 24));
