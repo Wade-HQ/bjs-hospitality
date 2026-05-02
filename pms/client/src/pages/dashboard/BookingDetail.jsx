@@ -30,7 +30,19 @@ export default function BookingDetail() {
   const [docType, setDocType] = useState('passport');
   const fileInputRef = useRef(null);
 
-  const load = () => { api.get(`/api/bookings/${id}`).then(r => setBooking(r.data)).finally(() => setLoading(false)); };
+  const loadDocuments = (guestId) => {
+    if (!guestId) return;
+    api.get(`/api/guests/${guestId}`).then(r => setDocuments(r.data?.documents || []));
+  };
+
+  const load = () => {
+    api.get(`/api/bookings/${id}`)
+      .then(r => {
+        setBooking(r.data);
+        loadDocuments(r.data?.booking?.guest_id);
+      })
+      .finally(() => setLoading(false));
+  };
   useEffect(load, [id]);
 
   const updateStatus = async (status) => {
