@@ -659,9 +659,8 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
         taxAmount = subtotal * (taxRate / 100);
         totalAmount = subtotal + taxAmount;
       } catch (e) {
-        subtotal = existing.subtotal;
-        taxAmount = existing.tax_amount;
-        totalAmount = existing.total_amount;
+        console.error('[bookings] PUT rate plan pricing error:', e.message);
+        return res.status(400).json({ error: `Rate plan pricing failed: ${e.message}` });
       }
     } else {
       // Legacy path
