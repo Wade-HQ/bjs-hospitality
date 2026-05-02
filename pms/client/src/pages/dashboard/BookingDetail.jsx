@@ -20,6 +20,7 @@ export default function BookingDetail() {
   const [editRoomTypes, setEditRoomTypes] = useState([]);
   const [editRooms, setEditRooms] = useState([]);
   const [editMealPackages, setEditMealPackages] = useState([]);
+  const [editRatePlans, setEditRatePlans] = useState([]);
   const [editPreview, setEditPreview] = useState(null);
   const [editPreviewLoading, setEditPreviewLoading] = useState(false);
   const [guestSearch, setGuestSearch] = useState('');
@@ -63,6 +64,7 @@ export default function BookingDetail() {
       children: b.children || 0,
       region: b.region || 'international',
       meal_package_id: b.meal_package_id ? String(b.meal_package_id) : '',
+      rate_plan_id: b.rate_plan_id ? String(b.rate_plan_id) : '',
       guest_id: b.guest_id,
       guest_name: `${b.first_name} ${b.last_name}`,
       special_requests: b.special_requests || '',
@@ -71,6 +73,7 @@ export default function BookingDetail() {
     setGuestSearch('');
     setGuestResults([]);
     setEditPreview(null);
+    setEditRatePlans([]);
     Promise.all([
       api.get('/api/room-types'),
       api.get('/api/meal-packages'),
@@ -93,6 +96,7 @@ export default function BookingDetail() {
         children: Number(editForm.children || 0),
         region: editForm.region,
         meal_package_id: editForm.meal_package_id || null,
+        rate_plan_id: editForm.rate_plan_id || null,
         guest_id: editForm.guest_id,
         special_requests: editForm.special_requests || null,
         source: editForm.source,
@@ -113,6 +117,27 @@ export default function BookingDetail() {
       .then(r => setEditRooms(r.data?.rooms || []));
   }, [editForm.room_type_id, editModal]);
 
+  // Load rate plans for edit modal when room_type + dates + pax are set
+  useEffect(() => {
+    if (!editModal || !editForm.room_type_id || !editForm.check_in || !editForm.check_out || !editForm.adults) {
+      setEditRatePlans([]);
+      return;
+    }
+    const ci = new Date(editForm.check_in), co = new Date(editForm.check_out);
+    if (co <= ci) return;
+    const nights = Math.max(1, Math.round((co - ci) / 86400000));
+    const params = new URLSearchParams({
+      room_type_id: editForm.room_type_id,
+      check_in: editForm.check_in,
+      adults: editForm.adults,
+      children: editForm.children || 0,
+      nights,
+    });
+    api.get(`/api/rates/calculate?${params}`)
+      .then(r => setEditRatePlans(r.data?.rate_plans || []))
+      .catch(() => setEditRatePlans([]));
+  }, [editModal, editForm.room_type_id, editForm.check_in, editForm.check_out, editForm.adults, editForm.children]);
+
   useEffect(() => {
     if (!guestSearch.trim() || guestSearch.length < 2) { setGuestResults([]); return; }
     const timer = setTimeout(() => {
@@ -123,15 +148,22 @@ export default function BookingDetail() {
   }, [guestSearch]);
 
   useEffect(() => {
-    const { room_type_id, region, check_in, check_out, adults, children, meal_package_id } = editForm;
-    if (!room_type_id || !check_in || !check_out || !adults || !editModal) { setEditPreview(null); return; }
+    const { rate_plan_id, room_type_id, region, check_in, check_out, adults, children, meal_package_id } = editForm;
+    if (!check_in || !check_out || !adults || !editModal) { setEditPreview(null); return; }
     if (new Date(check_out) <= new Date(check_in)) { setEditPreview(null); return; }
+    // Need either rate_plan_id or room_type_id for preview
+    if (!rate_plan_id && !room_type_id) { setEditPreview(null); return; }
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setEditPreviewLoading(true);
       try {
-        const params = new URLSearchParams({ room_type_id, region: region || 'international', check_in, check_out, adults, children: children || 0 });
-        if (meal_package_id) params.set('meal_package_id', meal_package_id);
+        let params;
+        if (rate_plan_id) {
+          params = new URLSearchParams({ rate_plan_id, check_in, check_out, adults, children: children || 0 });
+        } else {
+          params = new URLSearchParams({ room_type_id, region: region || 'international', check_in, check_out, adults, children: children || 0 });
+          if (meal_package_id) params.set('meal_package_id', meal_package_id);
+        }
         const r = await api.get(`/api/bookings/price-preview?${params}`, { signal: controller.signal });
         setEditPreview(r.data);
       } catch (e) {
@@ -139,7 +171,7 @@ export default function BookingDetail() {
       } finally { setEditPreviewLoading(false); }
     }, 350);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [editForm.room_type_id, editForm.region, editForm.check_in, editForm.check_out, editForm.adults, editForm.children, editForm.meal_package_id, editModal]);
+  }, [editForm.rate_plan_id, editForm.room_type_id, editForm.region, editForm.check_in, editForm.check_out, editForm.adults, editForm.children, editForm.meal_package_id, editModal]);
 
   if (loading) return <div className="p-12 text-center text-gray-400">Loading…</div>;
   if (!booking?.booking) return <div className="p-12 text-center text-gray-400">Not found</div>;
@@ -163,7 +195,7 @@ export default function BookingDetail() {
             {[
               ['Room', b.room_number ? `Room ${b.room_number}` : '—'],
               ['Type', b.room_type_name],
-              ['Region', b.region ? (b.region === 'sadc' ? 'SADC' : 'International') : '—'],
+              ...(b.rate_plan_id ? [['Rate Plan', b.rate_plan_name || `#${b.rate_plan_id}`]] : [['Region', b.region ? (b.region === 'sadc' ? 'SADC' : 'International') : '—']]),
               ['Check-in', b.check_in],
               ['Check-out', b.check_out],
               ['Nights', b.nights],
@@ -299,15 +331,20 @@ export default function BookingDetail() {
             ))}
           </div>
 
-          {/* Region */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
-            <select value={editForm.region || 'international'} onChange={e => setEditForm(p => ({...p, region: e.target.value}))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-              <option value="international">International</option>
-              <option value="sadc">SADC</option>
-            </select>
-          </div>
+          {/* Legacy pricing fields — shown only for bookings without a rate plan */}
+          {!editForm.rate_plan_id && (
+            <>
+              {/* Region */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+                <select value={editForm.region || 'international'} onChange={e => setEditForm(p => ({...p, region: e.target.value}))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="international">International</option>
+                  <option value="sadc">SADC</option>
+                </select>
+              </div>
+            </>
+          )}
 
           {/* Room Type */}
           <div>
@@ -343,14 +380,36 @@ export default function BookingDetail() {
             </div>
           </div>
 
-          {/* Meal Package */}
+          {/* Legacy pricing fields — meal package shown only for bookings without a rate plan */}
+          {!editForm.rate_plan_id && (
+            <>
+              {/* Meal Package */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Meal Package</label>
+                <select value={editForm.meal_package_id || ''} onChange={e => setEditForm(p => ({...p, meal_package_id: e.target.value}))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="">Room Only</option>
+                  {editMealPackages.map(mp => <option key={mp.id} value={mp.id}>{mp.name}</option>)}
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* Rate Plan */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Meal Package</label>
-            <select value={editForm.meal_package_id || ''} onChange={e => setEditForm(p => ({...p, meal_package_id: e.target.value}))}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rate Plan</label>
+            <select value={editForm.rate_plan_id || ''} onChange={e => setEditForm(p => ({...p, rate_plan_id: e.target.value}))}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-              <option value="">Room Only</option>
-              {editMealPackages.map(mp => <option key={mp.id} value={mp.id}>{mp.name}</option>)}
+              <option value="">— Keep existing —</option>
+              {editRatePlans.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.rate_plan_name} — ZAR {Number(p.total_for_stay).toLocaleString()} total
+                </option>
+              ))}
             </select>
+            {editForm.rate_plan_id && (
+              <p className="text-xs text-gray-400 mt-1">Price recalculated from selected rate plan</p>
+            )}
           </div>
 
           {/* Source */}

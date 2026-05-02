@@ -7,35 +7,20 @@ export default function NewBooking() {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const [roomTypes, setRoomTypes] = useState([]);
-  const [roomTypeRates, setRoomTypeRates] = useState({});
   const [rooms, setRooms] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [mealPackages, setMealPackages] = useState([]);
+  const [ratePlans, setRatePlans] = useState([]);
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [form, setForm] = useState({
     check_in: '', check_out: '', room_type_id: '', room_id: '',
     adults: 1, children: 0, special_requests: '',
-    source: 'direct', status: 'confirmed', region: 'international', meal_package_id: '',
+    source: 'direct', status: 'confirmed', rate_plan_id: '',
     guest: { first_name:'', last_name:'', email:'', phone:'', nationality:'', id_type:'passport', id_number:'' }
   });
 
   useEffect(() => {
-    Promise.all([
-      api.get('/api/room-types'),
-      api.get('/api/meal-packages'),
-    ]).then(([rtRes, mpRes]) => {
-      const types = rtRes.data?.room_types || [];
-      setRoomTypes(types);
-      setMealPackages(mpRes.data?.meal_packages || []);
-      Promise.all(
-        types.map(rt => api.get(`/api/room-types/${rt.id}/rates`).then(r => ({ id: rt.id, rates: r.data.rates })))
-      ).then(results => {
-        const map = {};
-        results.forEach(({ id, rates }) => { map[id] = rates; });
-        setRoomTypeRates(map);
-      }).catch(() => {});
-    });
+    api.get('/api/room-types').then(r => setRoomTypes(r.data?.room_types || []));
   }, []);
 
   useEffect(() => {
@@ -43,24 +28,50 @@ export default function NewBooking() {
     api.get('/api/rooms', { params: { room_type_id: form.room_type_id } }).then(r => setRooms(r.data?.rooms || []));
   }, [form.room_type_id]);
 
+  // Load rate plans when room_type + dates + pax are all set
   useEffect(() => {
-    const { room_type_id, region, check_in, check_out, adults, children, meal_package_id } = form;
-    if (!room_type_id || !check_in || !check_out || !adults) { setPreview(null); return; }
+    if (!form.room_type_id || !form.check_in || !form.check_out || !form.adults) {
+      setRatePlans([]);
+      setForm(p => ({ ...p, rate_plan_id: '' }));
+      return;
+    }
+    const ci = new Date(form.check_in), co = new Date(form.check_out);
+    if (co <= ci) return;
+    const nights = Math.max(1, Math.round((co - ci) / 86400000));
+    const params = new URLSearchParams({
+      room_type_id: form.room_type_id,
+      check_in: form.check_in,
+      adults: form.adults,
+      children: form.children || 0,
+      nights,
+    });
+    api.get(`/api/rates/calculate?${params}`)
+      .then(r => {
+        const plans = r.data?.rate_plans || [];
+        setRatePlans(plans);
+        if (plans.length === 1) setForm(p => ({ ...p, rate_plan_id: String(plans[0].id) }));
+      })
+      .catch(() => setRatePlans([]));
+  }, [form.room_type_id, form.check_in, form.check_out, form.adults, form.children]);
+
+  // Price preview when rate_plan_id is set
+  useEffect(() => {
+    const { rate_plan_id, check_in, check_out, adults, children } = form;
+    if (!rate_plan_id || !check_in || !check_out || !adults) { setPreview(null); return; }
     const ci = new Date(check_in), co = new Date(check_out);
     if (co <= ci) { setPreview(null); return; }
 
     const timer = setTimeout(async () => {
       setPreviewLoading(true);
       try {
-        const params = new URLSearchParams({ room_type_id, region, check_in, check_out, adults, children: children || 0 });
-        if (meal_package_id) params.set('meal_package_id', meal_package_id);
+        const params = new URLSearchParams({ rate_plan_id, check_in, check_out, adults, children: children || 0 });
         const r = await api.get(`/api/bookings/price-preview?${params}`);
         setPreview(r.data);
       } catch { setPreview(null); }
       finally { setPreviewLoading(false); }
     }, 350);
     return () => clearTimeout(timer);
-  }, [form.room_type_id, form.region, form.check_in, form.check_out, form.adults, form.children, form.meal_package_id]);
+  }, [form.rate_plan_id, form.check_in, form.check_out, form.adults, form.children]);
 
   const setField = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const setGuest = (k, v) => setForm(p => ({ ...p, guest: { ...p.guest, [k]: v } }));
@@ -99,23 +110,13 @@ export default function NewBooking() {
               </div>
             ))}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Region / Rate</label>
-              <select value={form.region} onChange={e => setField('region', e.target.value)} required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                <option value="international">International</option>
-                <option value="sadc">SADC</option>
-              </select>
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Room Type</label>
               <select value={form.room_type_id} onChange={e => setField('room_type_id', e.target.value)} required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                 <option value="">Select room type</option>
-                {roomTypes.map(rt => {
-                  const regionRate = roomTypeRates[rt.id]?.[form.region]?.rate_per_person;
-                  const rateStr = regionRate != null ? ` — ${rt.currency || 'ZAR'} ${Number(regionRate).toLocaleString()}/pp` : '';
-                  return <option key={rt.id} value={rt.id}>{rt.name}{rateStr}</option>;
-                })}
+                {roomTypes.map(rt => (
+                  <option key={rt.id} value={rt.id}>{rt.name}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -127,22 +128,30 @@ export default function NewBooking() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Meal Package</label>
-              <select value={form.meal_package_id} onChange={e => setField('meal_package_id', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                <option value="">Room Only (no meals)</option>
-                {mealPackages.map(mp => (
-                  <option key={mp.id} value={mp.id}>{mp.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Adults</label>
               <input type="number" min={1} value={form.adults} onChange={e => setField('adults', parseInt(e.target.value))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Children</label>
               <input type="number" min={0} value={form.children} onChange={e => setField('children', parseInt(e.target.value))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Rate Plan</label>
+              <select value={form.rate_plan_id} onChange={e => setField('rate_plan_id', e.target.value)} required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <option value="">
+                  {!form.room_type_id || !form.check_in || !form.check_out
+                    ? 'Select room type and dates first'
+                    : ratePlans.length === 0
+                    ? 'No rate plans available'
+                    : 'Select rate plan'}
+                </option>
+                {ratePlans.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.rate_plan_name} — ZAR {Number(p.total_for_stay).toLocaleString()} total
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
@@ -178,25 +187,21 @@ export default function NewBooking() {
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Accommodation</span>
-                    <span className="font-medium">{preview.accommodation_subtotal?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                    <span className="font-medium">{Number(preview.total_for_stay).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
                   </div>
                   {preview.meal_total > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-500">Meals</span>
-                      <span className="font-medium">{preview.meal_total?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                      <span className="font-medium">{Number(preview.meal_total).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
                     </div>
                   )}
-                  <div className="flex justify-between border-t border-gray-200 pt-1">
-                    <span className="text-gray-500">Subtotal</span>
-                    <span>{preview.subtotal?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
-                  </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Tax</span>
-                    <span>{preview.tax_amount?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                    <span>{Number(preview.tax_amount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between border-t border-gray-200 pt-1">
                     <span className="font-semibold text-primary">Total</span>
-                    <span className="font-bold text-primary text-base">{preview.total_amount?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                    <span className="font-bold text-primary text-base">{Number(preview.total_amount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
                   </div>
                   {preview.season_name && (
                     <div className="text-xs text-amber-600 mt-1">* {preview.season_name} adjustment applied</div>

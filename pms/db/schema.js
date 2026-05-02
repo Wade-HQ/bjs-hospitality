@@ -1,10 +1,40 @@
 'use strict';
 const bcrypt = require('bcrypt');
+const fs = require('fs');
+const path = require('path');
 
 async function runMigrations(db) {
   // Enable WAL mode for concurrent access
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
+
+  // ── Step 1: Backup old rates tables before dropping them ─────────────────────
+  // Only runs once — guard: check if a backup file already exists
+  const BACKUP_DIR = '/opt/bjs-hospitality';
+  const backupExists = fs.existsSync(BACKUP_DIR) &&
+    fs.readdirSync(BACKUP_DIR).some(f => f.startsWith('rates-backup-') && f.endsWith('.json'));
+
+  if (!backupExists) {
+    const OLD_RATE_TABLES = ['rates', 'room_type_rates', 'meal_packages', 'seasonal_adjustments', 'google_hotel_rates'];
+    const tablesPresent = OLD_RATE_TABLES.filter(t => {
+      const row = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(t);
+      return !!row;
+    });
+    if (tablesPresent.length > 0) {
+      const backup = {};
+      for (const t of tablesPresent) {
+        try { backup[t] = db.prepare(`SELECT * FROM ${t}`).all(); } catch (_) { backup[t] = []; }
+      }
+      try {
+        if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+        const backupPath = path.join(BACKUP_DIR, `rates-backup-${Date.now()}.json`);
+        fs.writeFileSync(backupPath, JSON.stringify(backup, null, 2));
+        console.log(`[migration] Rates backup written to ${backupPath}`);
+      } catch (e) {
+        console.warn(`[migration] Could not write rates backup: ${e.message}`);
+      }
+    }
+  }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS properties (
@@ -156,25 +186,6 @@ async function runMigrations(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- Legacy rate table (date-range / channel model). Retained for compatibility.
-    -- For per-person-sharing pricing, use room_type_rates instead.
-    CREATE TABLE IF NOT EXISTS rates (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      property_id INTEGER NOT NULL REFERENCES properties(id),
-      room_type_id INTEGER REFERENCES room_types(id),
-      name TEXT NOT NULL,
-      rate_per_night REAL NOT NULL,
-      currency TEXT DEFAULT 'USD',
-      valid_from TEXT,
-      valid_to TEXT,
-      min_nights INTEGER DEFAULT 1,
-      max_nights INTEGER,
-      days_of_week_json TEXT DEFAULT '[0,1,2,3,4,5,6]',
-      channel TEXT DEFAULT 'all' CHECK(channel IN ('all','direct','ota')),
-      active INTEGER DEFAULT 1,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
     CREATE TABLE IF NOT EXISTS availability_blocks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       property_id INTEGER NOT NULL REFERENCES properties(id),
@@ -258,15 +269,6 @@ async function runMigrations(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS google_hotel_rates (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      property_id INTEGER NOT NULL REFERENCES properties(id),
-      room_type_id INTEGER REFERENCES room_types(id),
-      display_rate REAL,
-      currency TEXT,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
     CREATE TABLE IF NOT EXISTS booking_audit_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       booking_id INTEGER NOT NULL REFERENCES bookings(id),
@@ -277,52 +279,101 @@ async function runMigrations(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS room_type_rates (
+    -- ── Step 2: New 6-layer rates architecture ───────────────────────────────
+
+    CREATE TABLE IF NOT EXISTS room_base_rates (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      room_type_id INTEGER NOT NULL REFERENCES room_types(id) ON DELETE CASCADE,
-      region TEXT NOT NULL CHECK(region IN ('international', 'sadc')),
+      property_id INTEGER NOT NULL,
+      room_type_id INTEGER NOT NULL REFERENCES room_types(id),
+      room_type_name TEXT NOT NULL,
       rate_per_person REAL NOT NULL DEFAULT 0,
-      single_supplement_multiplier REAL NOT NULL DEFAULT 1.5,
-      children_pct REAL NOT NULL DEFAULT 50,
-      is_online INTEGER NOT NULL DEFAULT 1,
-      is_sto INTEGER NOT NULL DEFAULT 1,
-      is_agent INTEGER NOT NULL DEFAULT 1,
-      is_ota INTEGER NOT NULL DEFAULT 1,
+      currency TEXT NOT NULL DEFAULT 'ZAR',
+      max_occupancy INTEGER,
+      active INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(room_type_id, region)
+      UNIQUE(property_id, room_type_id)
     );
 
-    CREATE TABLE IF NOT EXISTS meal_packages (
+    CREATE TABLE IF NOT EXISTS international_rate_settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      property_id INTEGER NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+      property_id INTEGER NOT NULL UNIQUE,
+      markup_percent REAL NOT NULL DEFAULT 30,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      children_meal_pct REAL NOT NULL DEFAULT 50,
+      children_room_pct REAL NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS meal_components (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      property_id INTEGER NOT NULL,
       name TEXT NOT NULL,
-      price_per_person REAL NOT NULL DEFAULT 0,
-      is_online INTEGER NOT NULL DEFAULT 1,
-      is_sto INTEGER NOT NULL DEFAULT 1,
-      is_agent INTEGER NOT NULL DEFAULT 1,
-      is_ota INTEGER NOT NULL DEFAULT 1,
-      sort_order INTEGER NOT NULL DEFAULT 0,
+      cost_per_person REAL NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'ZAR',
+      active INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
+      sort_order INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS seasonal_adjustments (
+    CREATE TABLE IF NOT EXISTS rate_plans (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      property_id INTEGER NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+      property_id INTEGER NOT NULL,
       name TEXT NOT NULL,
-      pct_change REAL NOT NULL DEFAULT 0,
+      description TEXT,
+      room_type_id INTEGER NOT NULL REFERENCES room_types(id),
+      meal_components_json TEXT NOT NULL DEFAULT '[]',
+      visible_on_website INTEGER NOT NULL DEFAULT 1,
+      visible_on_backoffice INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
+      sort_order INTEGER DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS seasons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      property_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
       start_date TEXT NOT NULL,
       end_date TEXT NOT NULL,
+      uplift_percent REAL NOT NULL DEFAULT 0,
+      applies_to_sadc INTEGER NOT NULL DEFAULT 1,
+      applies_to_international INTEGER NOT NULL DEFAULT 1,
+      applies_to_channels INTEGER NOT NULL DEFAULT 1,
+      active INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE INDEX IF NOT EXISTS idx_seasonal_adjustments_property_dates
-      ON seasonal_adjustments(property_id, start_date, end_date);
+    CREATE TABLE IF NOT EXISTS channels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      property_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'ota' CHECK(type IN ('ota','agent','seo','direct')),
+      markup_percent REAL NOT NULL DEFAULT 0,
+      base_region TEXT NOT NULL DEFAULT 'sadc' CHECK(base_region IN ('sadc','international')),
+      currency TEXT NOT NULL DEFAULT 'ZAR',
+      active INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
 
-    CREATE INDEX IF NOT EXISTS idx_meal_packages_property
-      ON meal_packages(property_id);
+    CREATE TABLE IF NOT EXISTS channel_rate_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      channel_id INTEGER NOT NULL REFERENCES channels(id),
+      rate_plan_id INTEGER NOT NULL REFERENCES rate_plans(id),
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(channel_id, rate_plan_id)
+    );
   `);
 
   // ── Column migrations (idempotent — SQLite throws if column already exists) ──
@@ -344,55 +395,134 @@ async function runMigrations(db) {
 
   const bookingRateMigrations = [
     `ALTER TABLE bookings ADD COLUMN region TEXT CHECK(region IN ('international', 'sadc'))`,
-    `ALTER TABLE bookings ADD COLUMN meal_package_id INTEGER REFERENCES meal_packages(id)`,
+    `ALTER TABLE bookings ADD COLUMN meal_package_id INTEGER`,
     `ALTER TABLE bookings ADD COLUMN meal_total REAL NOT NULL DEFAULT 0`,
+    `ALTER TABLE bookings ADD COLUMN rate_plan_id INTEGER REFERENCES rate_plans(id)`,
   ];
   for (const sql of bookingRateMigrations) {
     try { db.exec(sql); } catch (_) { /* column already exists */ }
   }
 
-  // ── Migrate children_pct from INTEGER to REAL (SQLite has no ALTER COLUMN) ──
-  // If the column type is still INTEGER on an existing DB, recreate the table.
-  const childrenPctCol = db.prepare(`PRAGMA table_info(room_type_rates)`).all().find(c => c.name === 'children_pct');
-  if (childrenPctCol && childrenPctCol.type === 'INTEGER') {
-    db.exec(`
-      ALTER TABLE room_type_rates RENAME TO room_type_rates_old;
-      CREATE TABLE room_type_rates (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_type_id INTEGER NOT NULL REFERENCES room_types(id) ON DELETE CASCADE,
-        region TEXT NOT NULL CHECK(region IN ('international', 'sadc')),
-        rate_per_person REAL NOT NULL DEFAULT 0,
-        single_supplement_multiplier REAL NOT NULL DEFAULT 1.5,
-        children_pct REAL NOT NULL DEFAULT 50,
-        is_online INTEGER NOT NULL DEFAULT 1,
-        is_sto INTEGER NOT NULL DEFAULT 1,
-        is_agent INTEGER NOT NULL DEFAULT 1,
-        is_ota INTEGER NOT NULL DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(room_type_id, region)
-      );
-      INSERT INTO room_type_rates SELECT * FROM room_type_rates_old;
-      DROP TABLE room_type_rates_old;
-    `);
-    console.log('[migration] Migrated room_type_rates.children_pct INTEGER → REAL');
+  // ── Step 3: Seed new tables from old data (idempotent) ───────────────────────
+
+  // 3a. room_base_rates — from room_type_rates (sadc region only = base rate)
+  for (const propId of [1, 2]) {
+    const emptyCheck = db.prepare('SELECT COUNT(*) as c FROM room_base_rates WHERE property_id=?').get(propId);
+    if (emptyCheck.c === 0) {
+      const oldTableExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='room_type_rates'`).get();
+      if (oldTableExists) {
+        db.exec(`
+          INSERT OR IGNORE INTO room_base_rates
+            (property_id, room_type_id, room_type_name, rate_per_person, currency, max_occupancy)
+          SELECT
+            rt.property_id,
+            rt.id,
+            rt.name,
+            COALESCE(rtr.rate_per_person, rt.base_rate, 0),
+            COALESCE(rt.currency, 'ZAR'),
+            rt.max_occupancy
+          FROM room_types rt
+          LEFT JOIN room_type_rates rtr ON rtr.room_type_id = rt.id AND rtr.region = 'sadc'
+          WHERE rt.property_id = ${propId}
+        `);
+        console.log(`[seed] room_base_rates seeded for property ${propId}`);
+      } else {
+        // Seed from room_types.base_rate directly if old table is gone
+        db.exec(`
+          INSERT OR IGNORE INTO room_base_rates
+            (property_id, room_type_id, room_type_name, rate_per_person, currency, max_occupancy)
+          SELECT property_id, id, name, COALESCE(base_rate, 0), COALESCE(currency, 'ZAR'), max_occupancy
+          FROM room_types WHERE property_id = ${propId}
+        `);
+        console.log(`[seed] room_base_rates seeded from room_types for property ${propId}`);
+      }
+    }
   }
 
-  // Seed room_type_rates from existing room_types for any room type that doesn't have rates yet
-  const roomTypesWithoutRates = db.prepare(`
-    SELECT id, base_rate FROM room_types
-    WHERE id NOT IN (SELECT DISTINCT room_type_id FROM room_type_rates)
-  `).all();
-  if (roomTypesWithoutRates.length > 0) {
-    const insertRate = db.prepare(`
-      INSERT OR IGNORE INTO room_type_rates (room_type_id, region, rate_per_person)
-      VALUES (?, ?, ?)
-    `);
-    for (const rt of roomTypesWithoutRates) {
-      insertRate.run(rt.id, 'international', rt.base_rate || 0);
-      insertRate.run(rt.id, 'sadc', rt.base_rate || 0);
+  // 3b. international_rate_settings — default 30% markup per property
+  for (const propId of [1, 2]) {
+    const intlEmpty = db.prepare('SELECT COUNT(*) as c FROM international_rate_settings WHERE property_id = ?').get(propId);
+    if (intlEmpty.c === 0) {
+      db.prepare('INSERT OR IGNORE INTO international_rate_settings (property_id, markup_percent) VALUES (?, ?)').run(propId, 30);
+      console.log(`[seed] international_rate_settings seeded for property ${propId}`);
     }
-    console.log(`[seed] Seeded room_type_rates for ${roomTypesWithoutRates.length} room types`);
+  }
+
+  // 3c. meal_components — from meal_packages
+  for (const propId of [1, 2]) {
+    const emptyCheck = db.prepare('SELECT COUNT(*) as c FROM meal_components WHERE property_id=?').get(propId);
+    if (emptyCheck.c === 0) {
+      const oldTableExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='meal_packages'`).get();
+      if (oldTableExists) {
+        db.exec(`
+          INSERT OR IGNORE INTO meal_components
+            (property_id, name, cost_per_person, sort_order)
+          SELECT property_id, name, price_per_person, sort_order
+          FROM meal_packages WHERE property_id = ${propId}
+        `);
+        console.log(`[seed] meal_components seeded from meal_packages for property ${propId}`);
+      }
+    }
+  }
+
+  // 3d. seasons — from seasonal_adjustments
+  for (const propId of [1, 2]) {
+    const emptyCheck = db.prepare('SELECT COUNT(*) as c FROM seasons WHERE property_id=?').get(propId);
+    if (emptyCheck.c === 0) {
+      const oldTableExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='seasonal_adjustments'`).get();
+      if (oldTableExists) {
+        db.exec(`
+          INSERT OR IGNORE INTO seasons
+            (property_id, name, start_date, end_date, uplift_percent)
+          SELECT property_id, name, start_date, end_date, pct_change
+          FROM seasonal_adjustments WHERE property_id = ${propId}
+        `);
+        console.log(`[seed] seasons seeded from seasonal_adjustments for property ${propId}`);
+      }
+    }
+  }
+
+  // 3e. channels — default channels per property
+  const DEFAULT_CHANNELS = [
+    { name: 'Booking.com',           type: 'ota',    markup: 0 },
+    { name: 'Airbnb',                type: 'ota',    markup: 0 },
+    { name: 'Expedia',               type: 'ota',    markup: 0 },
+    { name: 'Agent Rates',           type: 'agent',  markup: 0 },
+    { name: 'SEO / Website Specials', type: 'seo',   markup: 0 },
+  ];
+  for (const propId of [1, 2]) {
+    const emptyCheck = db.prepare('SELECT COUNT(*) as c FROM channels WHERE property_id=?').get(propId);
+    if (emptyCheck.c === 0) {
+      const insertCh = db.prepare(`
+        INSERT OR IGNORE INTO channels (property_id, name, type, markup_percent) VALUES (?, ?, ?, ?)
+      `);
+      for (const ch of DEFAULT_CHANNELS) {
+        insertCh.run(propId, ch.name, ch.type, ch.markup);
+      }
+      console.log(`[seed] channels seeded for property ${propId}`);
+    }
+  }
+
+  // 3f. rate_plans — "Room Only" plan for every room type
+  for (const propId of [1, 2]) {
+    const plansEmpty = db.prepare('SELECT COUNT(*) as c FROM rate_plans WHERE property_id = ?').get(propId);
+    if (plansEmpty.c === 0) {
+      const roomTypesForProp = db.prepare('SELECT id, name FROM room_types WHERE property_id = ?').all(propId);
+      for (const rt of roomTypesForProp) {
+        db.prepare(`INSERT OR IGNORE INTO rate_plans (property_id, room_type_id, name, meal_components_json, sort_order) VALUES (?, ?, 'Room Only', '[]', 0)`).run(propId, rt.id);
+      }
+      if (roomTypesForProp.length > 0) console.log(`[seed] rate_plans seeded for property ${propId}: ${roomTypesForProp.length} Room Only plans`);
+    }
+  }
+
+  // ── Step 4: Drop old rates tables (after seeding) ─────────────────────────
+  // Null out meal_package_id FK before dropping meal_packages to avoid orphaned refs
+  try { db.exec(`UPDATE bookings SET meal_package_id = NULL`); } catch (_) {}
+
+  const OLD_TABLES = ['rates', 'room_type_rates', 'meal_packages', 'seasonal_adjustments', 'google_hotel_rates'];
+  for (const t of OLD_TABLES) {
+    try { db.exec(`DROP TABLE IF EXISTS ${t}`); console.log(`[migration] Dropped ${t}`); }
+    catch (e) { console.log(`[migration] Could not drop ${t}: ${e.message}`); }
   }
 
   // Property column migrations
@@ -499,8 +629,7 @@ async function runMigrations(db) {
       console.log(`[seed] Room type added: ${rt.name}`);
       const rtId = db.prepare('SELECT last_insert_rowid() as id').get()?.id;
       if (rtId) {
-        db.prepare('INSERT OR IGNORE INTO room_type_rates (room_type_id, region, rate_per_person) VALUES (?, ?, ?)').run(rtId, 'international', rt.base_rate || 0);
-        db.prepare('INSERT OR IGNORE INTO room_type_rates (room_type_id, region, rate_per_person) VALUES (?, ?, ?)').run(rtId, 'sadc', rt.base_rate || 0);
+        db.prepare('INSERT OR IGNORE INTO room_base_rates (property_id, room_type_id, room_type_name, rate_per_person, max_occupancy) VALUES (?, ?, ?, ?, ?)').run(1, rtId, rt.name, rt.base_rate || 0, rt.max_occupancy || 2);
       }
     }
     db.prepare('UPDATE properties SET room_types_seeded=1 WHERE id=1').run();
@@ -572,8 +701,7 @@ async function runMigrations(db) {
       console.log(`[seed] Membene room type added: ${rt.name}`);
       const rtId = db.prepare('SELECT last_insert_rowid() as id').get()?.id;
       if (rtId) {
-        db.prepare('INSERT OR IGNORE INTO room_type_rates (room_type_id, region, rate_per_person) VALUES (?, ?, ?)').run(rtId, 'international', rt.base_rate || 0);
-        db.prepare('INSERT OR IGNORE INTO room_type_rates (room_type_id, region, rate_per_person) VALUES (?, ?, ?)').run(rtId, 'sadc', rt.base_rate || 0);
+        db.prepare('INSERT OR IGNORE INTO room_base_rates (property_id, room_type_id, room_type_name, rate_per_person, max_occupancy) VALUES (?, ?, ?, ?, ?)').run(2, rtId, rt.name, rt.base_rate || 0, rt.max_occupancy || 2);
       }
     }
     db.prepare('UPDATE properties SET room_types_seeded=1 WHERE id=2').run();

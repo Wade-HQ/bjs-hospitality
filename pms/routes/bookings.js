@@ -5,6 +5,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const { createNotification } = require('../utils/notifications');
 const { sendBookingConfirmation, sendBookingCancellation } = require('../utils/email');
 const { calculateBookingPrice } = require('../utils/pricing');
+const { calculateRatePlan } = require('../utils/rateCalculation');
 
 const router = express.Router();
 
@@ -89,12 +90,14 @@ function getBookingById(db, id) {
            r.room_number, r.floor, r.status as room_status,
            rt.name as room_type_name, rt.max_occupancy,
            p.name as property_name, p.currency as property_currency,
-           p.tax_label, p.tax_rate as property_tax_rate
+           p.tax_label, p.tax_rate as property_tax_rate,
+           rp.name AS rate_plan_name
     FROM bookings b
     LEFT JOIN guests g ON g.id = b.guest_id
     LEFT JOIN rooms r ON r.id = b.room_id
     LEFT JOIN room_types rt ON rt.id = b.room_type_id
     LEFT JOIN properties p ON p.id = b.property_id
+    LEFT JOIN rate_plans rp ON rp.id = b.rate_plan_id
     WHERE b.id = ? AND b.property_id = ?
   `).get(id, PROPERTY_ID());
 }
@@ -176,17 +179,48 @@ router.get('/', requireAuth, (req, res) => {
 // GET /api/bookings/price-preview
 router.get('/price-preview', requireAuth, (req, res) => {
   const db = getDb();
-  const { room_type_id, region, check_in, check_out, adults, children, meal_package_id } = req.query;
+  const { room_type_id, region, check_in, check_out, adults, children, meal_package_id, rate_plan_id } = req.query;
 
   const empty = { adjusted_rate: 0, accommodation_subtotal: 0, meal_total: 0, subtotal: 0, tax_amount: 0, total_amount: 0, season_name: null };
 
-  if (!room_type_id || !check_in || !check_out || !adults) return res.json(empty);
+  if (!check_in || !check_out || !adults) return res.json(empty);
 
   const ciDate = new Date(check_in);
   const coDate = new Date(check_out);
   if (isNaN(ciDate) || isNaN(coDate) || coDate <= ciDate) return res.json(empty);
 
-  const nights = Math.round((coDate - ciDate) / (1000 * 60 * 60 * 24));
+  const nights = Math.max(1, Math.round((coDate - ciDate) / (1000 * 60 * 60 * 24)));
+
+  // New rate plan path
+  if (rate_plan_id) {
+    try {
+      const result = calculateRatePlan(db, {
+        property_id: PROPERTY_ID(),
+        rate_plan_id: parseInt(rate_plan_id),
+        adults: parseInt(adults),
+        children: parseInt(children || 0),
+        nights,
+        check_in,
+      });
+      const property = db.prepare('SELECT tax_rate FROM properties WHERE id = ?').get(PROPERTY_ID());
+      const taxRate = property?.tax_rate || 0;
+      const taxAmount = Math.round(result.total_for_stay * (taxRate / 100));
+      return res.json({
+        ...result,
+        accommodation_subtotal: result.total_for_stay - result.meal_total_per_night * nights,
+        meal_total: result.meal_total_per_night * nights,
+        subtotal: result.total_for_stay,
+        tax_amount: taxAmount,
+        total_amount: result.total_for_stay + taxAmount,
+        season_name: result.season_applied?.name || null,
+      });
+    } catch (e) {
+      return res.json(empty);
+    }
+  }
+
+  // Legacy path: region + meal_package_id
+  if (!room_type_id) return res.json(empty);
 
   try {
     const result = calculateBookingPrice(db, {
@@ -274,8 +308,9 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
     commission_rate,
     // Payment (optional)
     payment_amount, payment_method, payment_date, payment_reference, payment_notes,
-    region = 'international',
+    region,
     meal_package_id,
+    rate_plan_id,
   } = req.body;
 
   if (!check_in || !check_out) {
@@ -284,7 +319,8 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
   if (!room_id && !room_type_id) {
     return res.status(400).json({ error: 'room_id or room_type_id is required' });
   }
-  if (region && !['international', 'sadc'].includes(region)) {
+  // region is required only when not using rate_plan_id
+  if (!rate_plan_id && region && !['international', 'sadc'].includes(region)) {
     return res.status(400).json({ error: 'region must be international or sadc' });
   }
   if (!guest_id && (!first_name || !last_name)) {
@@ -374,27 +410,55 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
   const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(PROPERTY_ID());
 
   // Calculate financials using the pricing utility
-  let roomRate, mealTotal, subtotal, taxAmount, totalAmount;
-  try {
-    const pricing = calculateBookingPrice(db, {
-      property_id: PROPERTY_ID(),
-      room_type_id: resolvedRoomTypeId,
-      region: region || 'international',
-      check_in,
-      check_out,
-      nights,
-      adults: parseInt(adults),
-      children: parseInt(children || 0),
-      meal_package_id: meal_package_id ? parseInt(meal_package_id) : null,
-    });
-    roomRate = pricing.adjusted_rate;
-    mealTotal = pricing.meal_total;
-    subtotal = pricing.subtotal;
-    taxAmount = pricing.tax_amount;
-    totalAmount = pricing.total_amount;
-  } catch (e) {
-    console.error('[bookings] pricing error:', e.message);
-    return res.status(422).json({ error: `Pricing error: ${e.message}` });
+  let roomRate, mealTotal, subtotal, taxAmount, totalAmount, seasonName;
+  if (rate_plan_id) {
+    // New rate plan path
+    try {
+      const rpResult = calculateRatePlan(db, {
+        property_id: PROPERTY_ID(),
+        rate_plan_id: parseInt(rate_plan_id),
+        adults: parseInt(adults),
+        children: parseInt(children || 0),
+        nights,
+        check_in,
+      });
+      const property = db.prepare('SELECT tax_rate FROM properties WHERE id = ?').get(PROPERTY_ID());
+      const taxRate = property?.tax_rate || 0;
+      const taxAmt = Math.round(rpResult.total_for_stay * (taxRate / 100));
+      roomRate = rpResult.total_per_night;
+      mealTotal = rpResult.meal_total_per_night * nights;
+      subtotal = rpResult.total_for_stay;
+      taxAmount = taxAmt;
+      totalAmount = rpResult.total_for_stay + taxAmt;
+      seasonName = rpResult.season_applied?.name || null;
+    } catch (e) {
+      console.error('[bookings] rate plan pricing error:', e.message);
+      return res.status(400).json({ error: e.message });
+    }
+  } else {
+    // Legacy path: region + meal_package_id
+    try {
+      const pricing = calculateBookingPrice(db, {
+        property_id: PROPERTY_ID(),
+        room_type_id: resolvedRoomTypeId,
+        region: region || 'international',
+        check_in,
+        check_out,
+        nights,
+        adults: parseInt(adults),
+        children: parseInt(children || 0),
+        meal_package_id: meal_package_id ? parseInt(meal_package_id) : null,
+      });
+      roomRate = pricing.adjusted_rate;
+      mealTotal = pricing.meal_total;
+      subtotal = pricing.subtotal;
+      taxAmount = pricing.tax_amount;
+      totalAmount = pricing.total_amount;
+      seasonName = null;
+    } catch (e) {
+      console.error('[bookings] pricing error:', e.message);
+      return res.status(422).json({ error: `Pricing error: ${e.message}` });
+    }
   }
 
   const effectiveCommissionRate = commission_rate !== undefined
@@ -415,8 +479,9 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
       room_rate, meal_package_id, meal_total, extras_json,
       subtotal, tax_amount, tax_rate, discount_amount, total_amount,
       currency, commission_rate, commission_amount, net_to_property,
-      status, payment_status, special_requests, internal_notes, channel_booking_ref, region
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      status, payment_status, special_requests, internal_notes, channel_booking_ref, region,
+      rate_plan_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     bookingRef, source, PROPERTY_ID(),
     resolvedRoomId || null, resolvedRoomTypeId || null, resolvedGuestId,
@@ -433,7 +498,8 @@ router.post('/', requireAuth, requireRole('owner','hotel_manager','front_desk','
     'confirmed', 'unpaid',
     special_requests || null, internal_notes || null,
     channel_booking_ref || null,
-    region || 'international'
+    rate_plan_id ? null : (region || 'international'),
+    rate_plan_id ? parseInt(rate_plan_id) : null
   );
 
   const newBookingId = bookingResult.lastInsertRowid;
@@ -521,7 +587,7 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
     adults, children, special_requests, internal_notes,
     channel_booking_ref, status, payment_status,
     discount_amount, extras_json,
-    guest_id, region, meal_package_id, source,
+    guest_id, region, meal_package_id, source, rate_plan_id,
   } = req.body;
 
   if (guest_id !== undefined) {
@@ -561,6 +627,7 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
 
   if (check_in || check_out || discount_amount !== undefined || extras_json !== undefined ||
       region !== undefined || meal_package_id !== undefined ||
+      rate_plan_id !== undefined ||
       adults !== undefined || children !== undefined) {
     const ciDate = new Date(newCheckIn);
     const coDate = new Date(newCheckOut);
@@ -572,26 +639,54 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
     const extrasTotal = extras.reduce((sum, e) => sum + ((e.quantity || 1) * (e.unit_price || 0)), 0);
     const disc = discount_amount !== undefined ? parseFloat(discount_amount) : (existing.discount_amount || 0);
 
-    try {
-      const pricing = calculateBookingPrice(db, {
-        property_id: PROPERTY_ID(),
-        room_type_id: room_type_id || existing.room_type_id,
-        region: region !== undefined ? region : (existing.region || 'international'),
-        check_in: newCheckIn,
-        check_out: newCheckOut,
-        nights,
-        adults: parseInt(adults !== undefined ? adults : existing.adults),
-        children: parseInt(children !== undefined ? children : existing.children),
-        meal_package_id: meal_package_id !== undefined ? meal_package_id : existing.meal_package_id,
-      });
-      subtotal = pricing.accommodation_subtotal + pricing.meal_total + extrasTotal - disc;
-      const taxRate = existing.tax_rate || 0;
-      taxAmount = subtotal * (taxRate / 100);
-      totalAmount = subtotal + taxAmount;
-    } catch (e) {
-      subtotal = existing.subtotal;
-      taxAmount = existing.tax_amount;
-      totalAmount = existing.total_amount;
+    // Determine effective rate_plan_id: new value, existing value, or null
+    const effectiveRatePlanId = rate_plan_id !== undefined
+      ? (rate_plan_id || null)
+      : (existing.rate_plan_id || null);
+
+    if (effectiveRatePlanId) {
+      // New rate plan path
+      try {
+        const rpResult = calculateRatePlan(db, {
+          property_id: PROPERTY_ID(),
+          rate_plan_id: parseInt(effectiveRatePlanId),
+          adults: parseInt(adults !== undefined ? adults : existing.adults),
+          children: parseInt(children !== undefined ? children : (existing.children || 0)),
+          nights,
+          check_in: newCheckIn,
+        });
+        const taxRate = existing.tax_rate || 0;
+        const taxAmt = Math.round(rpResult.total_for_stay * (taxRate / 100));
+        subtotal = rpResult.total_for_stay + extrasTotal - disc;
+        taxAmount = subtotal * (taxRate / 100);
+        totalAmount = subtotal + taxAmount;
+      } catch (e) {
+        console.error('[bookings] PUT rate plan pricing error:', e.message);
+        return res.status(400).json({ error: `Rate plan pricing failed: ${e.message}` });
+      }
+    } else {
+      // Legacy path
+      try {
+        const pricing = calculateBookingPrice(db, {
+          property_id: PROPERTY_ID(),
+          room_type_id: room_type_id || existing.room_type_id,
+          region: region !== undefined ? region : (existing.region || 'international'),
+          check_in: newCheckIn,
+          check_out: newCheckOut,
+          nights,
+          adults: parseInt(adults !== undefined ? adults : existing.adults),
+          children: parseInt(children !== undefined ? children : existing.children),
+          meal_package_id: meal_package_id !== undefined ? meal_package_id : existing.meal_package_id,
+        });
+        subtotal = pricing.accommodation_subtotal + pricing.meal_total + extrasTotal - disc;
+        const taxRate = existing.tax_rate || 0;
+        taxAmount = subtotal * (taxRate / 100);
+        totalAmount = subtotal + taxAmount;
+      } catch (e) {
+        subtotal = existing.subtotal;
+        taxAmount = existing.tax_amount;
+        totalAmount = existing.total_amount;
+      }
     }
   }
 
@@ -623,6 +718,7 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
       region = COALESCE(?, region),
       meal_package_id = COALESCE(?, meal_package_id),
       source = COALESCE(?, source),
+      rate_plan_id = COALESCE(?, rate_plan_id),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ? AND property_id = ?
   `).run(
@@ -638,6 +734,7 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
     status || null, payment_status || null,
     guest_id !== undefined ? guest_id : null, region !== undefined ? region : null,
     meal_package_id !== undefined ? (meal_package_id || null) : null, source || null,
+    rate_plan_id !== undefined ? (rate_plan_id ? parseInt(rate_plan_id) : null) : null,
     req.params.id, PROPERTY_ID()
   );
 

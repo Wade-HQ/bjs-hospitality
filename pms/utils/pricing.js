@@ -17,6 +17,12 @@ function calculateBookingPrice(db, {
   children,
   meal_package_id,
 }) {
+  // Guard: legacy tables may have been dropped in the rates-rebuild migration
+  const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='room_type_rates'").get();
+  if (!tableCheck) {
+    throw new Error('Legacy rate tables removed — booking requires a rate_plan_id');
+  }
+
   // Input validation
   const adultsInt = parseInt(adults);
   const childrenInt = parseInt(children || 0);
