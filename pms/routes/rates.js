@@ -521,7 +521,7 @@ router.put('/channels/:id', requireAuth, requireRole(...WRITE_ROLES), (req, res)
   ).get(req.params.id, pid);
   if (!existing) return res.status(404).json({ error: 'Channel not found' });
 
-  const { name, markup_percent, base_region, active, description } = req.body;
+  const { name, type, markup_percent, base_region, currency, active, notes } = req.body;
 
   if (name !== undefined && !name.trim()) {
     return res.status(400).json({ error: 'name cannot be empty' });
@@ -531,20 +531,31 @@ router.put('/channels/:id', requireAuth, requireRole(...WRITE_ROLES), (req, res)
     return res.status(400).json({ error: 'markup_percent must be a number' });
   }
 
+  const VALID_TYPES = ['ota', 'agent', 'seo', 'direct'];
+  if (type !== undefined && !VALID_TYPES.includes(type)) {
+    return res.status(400).json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` });
+  }
+
+  const normalizedRegion = base_region !== undefined ? (base_region || 'sadc').toLowerCase() : undefined;
+
   db.prepare(`
     UPDATE channels SET
       name           = COALESCE(?, name),
+      type           = COALESCE(?, type),
       markup_percent = COALESCE(?, markup_percent),
       base_region    = COALESCE(?, base_region),
+      currency       = COALESCE(?, currency),
       active         = COALESCE(?, active),
-      description    = COALESCE(?, description)
+      notes          = COALESCE(?, notes)
     WHERE id = ? AND property_id = ?
   `).run(
-    name           ? name.trim()                         : null,
+    name           ? name.trim()                              : null,
+    type           !== undefined ? type                       : null,
     markup_percent !== undefined ? parseFloat(markup_percent) : null,
-    base_region    || null,
-    active         !== undefined ? (active ? 1 : 0)     : null,
-    description    !== undefined ? description           : null,
+    normalizedRegion !== undefined ? normalizedRegion         : null,
+    currency       !== undefined ? currency                   : null,
+    active         !== undefined ? (active ? 1 : 0)          : null,
+    notes          !== undefined ? notes                      : null,
     req.params.id, pid
   );
 
