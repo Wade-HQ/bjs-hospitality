@@ -531,6 +531,10 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
   if (region !== undefined && !['international', 'sadc'].includes(region)) {
     return res.status(400).json({ error: 'region must be international or sadc' });
   }
+  const VALID_SOURCES = ['direct', 'ota_internal', 'booking_com', 'airbnb', 'expedia', 'google'];
+  if (source !== undefined && source !== null && source !== '' && !VALID_SOURCES.includes(source)) {
+    return res.status(400).json({ error: `source must be one of: ${VALID_SOURCES.join(', ')}` });
+  }
 
   // If changing dates or room, check availability
   const newCheckIn = check_in || existing.check_in;
