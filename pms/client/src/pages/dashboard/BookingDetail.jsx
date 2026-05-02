@@ -4,11 +4,13 @@ import api from '../../api/index.js';
 import StatusBadge from '../../components/StatusBadge.jsx';
 import Modal from '../../components/Modal.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 
 export default function BookingDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const { user } = useAuth();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -29,6 +31,20 @@ export default function BookingDetail() {
   const [docUploading, setDocUploading] = useState(false);
   const [docType, setDocType] = useState('passport');
   const fileInputRef = useRef(null);
+
+  // Extras state
+  const [addExtrasType, setAddExtrasType] = useState(null);
+  const [extrasLoading, setExtrasLoading] = useState(false);
+  const [manualForm, setManualForm] = useState({ description: '', qty: 1, unit_price: '', notes: '' });
+  const [shuttleForm, setShuttleForm] = useState({ from: '', to: '', date: '', time: '08:00', pax: 1, notes: '', price: '', return_trip: false, return_date: '', return_time: '' });
+  const [pgForm, setPgForm] = useState({ iso_date: '', time_slot: '', group_size: 1, experience: '', notes: '', price: '' });
+
+  // Price override state
+  const [overrideModal, setOverrideModal] = useState(false);
+  const [overrideForm, setOverrideForm] = useState({ amount: '', reason: '' });
+  const [overrideLoading, setOverrideLoading] = useState(false);
+
+  const isManager = user && ['owner', 'hotel_manager'].includes(user.role);
 
   const loadDocuments = (guestId) => {
     if (!guestId) return;
@@ -100,6 +116,101 @@ export default function BookingDetail() {
     }
   };
 
+  // Extras handlers
+  const addManualExtra = async () => {
+    if (!manualForm.description) return;
+    setExtrasLoading(true);
+    try {
+      await api.post(`/api/bookings/${id}/extras`, {
+        description: manualForm.description,
+        qty: parseInt(manualForm.qty) || 1,
+        unit_price: parseFloat(manualForm.unit_price) || 0,
+        notes: manualForm.notes,
+      });
+      addToast('Extra added');
+      setAddExtrasType(null);
+      setManualForm({ description: '', qty: 1, unit_price: '', notes: '' });
+      load();
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Error adding extra', 'error');
+    } finally { setExtrasLoading(false); }
+  };
+
+  const addShuttleExtra = async () => {
+    setExtrasLoading(true);
+    try {
+      await api.post(`/api/bookings/${id}/extras/shuttle`, {
+        ...shuttleForm,
+        pax: parseInt(shuttleForm.pax) || 1,
+        price: parseFloat(shuttleForm.price) || 0,
+      });
+      addToast('Shuttle transfer booked');
+      setAddExtrasType(null);
+      setShuttleForm({ from: '', to: '', date: '', time: '08:00', pax: 1, notes: '', price: '', return_trip: false, return_date: '', return_time: '' });
+      load();
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Shuttle booking failed', 'error');
+    } finally { setExtrasLoading(false); }
+  };
+
+  const addPgExtra = async () => {
+    setExtrasLoading(true);
+    try {
+      await api.post(`/api/bookings/${id}/extras/paragliding`, {
+        ...pgForm,
+        group_size: parseInt(pgForm.group_size) || 1,
+        price: parseFloat(pgForm.price) || 0,
+      });
+      addToast('Paragliding booked');
+      setAddExtrasType(null);
+      setPgForm({ iso_date: '', time_slot: '', group_size: 1, experience: '', notes: '', price: '' });
+      load();
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Paragliding booking failed', 'error');
+    } finally { setExtrasLoading(false); }
+  };
+
+  const deleteExtra = async (extraId) => {
+    if (!window.confirm('Remove this extra?')) return;
+    try {
+      await api.delete(`/api/bookings/${id}/extras/${extraId}`);
+      addToast('Extra removed');
+      load();
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Error', 'error');
+    }
+  };
+
+  // Price override handlers
+  const requestOverride = async () => {
+    setOverrideLoading(true);
+    try {
+      await api.post(`/api/bookings/${id}/price-override`, overrideForm);
+      addToast(isManager ? 'Price override applied' : 'Override request submitted for approval');
+      setOverrideModal(false);
+      setOverrideForm({ amount: '', reason: '' });
+      load();
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Error', 'error');
+    } finally { setOverrideLoading(false); }
+  };
+
+  const approveOverride = async () => {
+    try {
+      await api.post(`/api/bookings/${id}/price-override/approve`);
+      addToast('Price override approved');
+      load();
+    } catch (e) { addToast(e.response?.data?.error || 'Error', 'error'); }
+  };
+
+  const rejectOverride = async () => {
+    try {
+      await api.post(`/api/bookings/${id}/price-override/reject`);
+      addToast('Override rejected');
+      load();
+    } catch (e) { addToast(e.response?.data?.error || 'Error', 'error'); }
+  };
+
   const openEditModal = () => {
     const b = booking.booking;
     setEditForm({
@@ -156,7 +267,6 @@ export default function BookingDetail() {
       .then(r => setEditRooms(r.data?.rooms || []));
   }, [editForm.room_type_id, editModal]);
 
-  // Load rate plans for edit modal when room_type + dates + pax are set
   useEffect(() => {
     if (!editModal || !editForm.room_type_id || !editForm.check_in || !editForm.check_out || !editForm.adults) {
       setEditRatePlans([]);
@@ -190,7 +300,6 @@ export default function BookingDetail() {
     const { rate_plan_id, room_type_id, check_in, check_out, adults, children } = editForm;
     if (!check_in || !check_out || !adults || !editModal) { setEditPreview(null); return; }
     if (new Date(check_out) <= new Date(check_in)) { setEditPreview(null); return; }
-    // Need either rate_plan_id or room_type_id for preview
     if (!rate_plan_id && !room_type_id) { setEditPreview(null); return; }
     const controller = new AbortController();
     const timer = setTimeout(async () => {
@@ -214,8 +323,10 @@ export default function BookingDetail() {
   if (loading) return <div className="p-12 text-center text-gray-400">Loading…</div>;
   if (!booking?.booking) return <div className="p-12 text-center text-gray-400">Not found</div>;
 
-  // API returns { booking: {...}, payments: [...], invoices: [...], ... }
   const b = booking.booking;
+  const extras = b.extras || [];
+  const extrasTotal = extras.reduce((s, e) => s + (e.total || 0), 0);
+
   return (
     <div className="max-w-5xl">
       <div className="flex items-center gap-3 mb-6 flex-wrap">
@@ -225,6 +336,34 @@ export default function BookingDetail() {
         <StatusBadge status={b.payment_status} />
         <span className="text-xs text-gray-400 capitalize">{b.source}</span>
       </div>
+
+      {/* Price override banner */}
+      {b.price_override_status && (
+        <div className={`rounded-xl border p-4 mb-4 text-sm ${
+          b.price_override_status === 'pending' ? 'bg-amber-50 border-amber-200' :
+          b.price_override_status === 'approved' ? 'bg-green-50 border-green-200' :
+          'bg-red-50 border-red-200'
+        }`}>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <span className={`font-semibold ${b.price_override_status === 'pending' ? 'text-amber-700' : b.price_override_status === 'approved' ? 'text-green-700' : 'text-red-700'}`}>
+                {b.price_override_status === 'pending' ? '⏳ Price Override Pending' : b.price_override_status === 'approved' ? '✓ Price Override Approved' : '✗ Price Override Rejected'}
+              </span>
+              {b.price_override_amount && (
+                <span className="ml-2 text-gray-600">— {b.currency} {Number(b.price_override_amount).toLocaleString()}</span>
+              )}
+              {b.price_override_reason && <span className="ml-2 text-gray-500">· {b.price_override_reason}</span>}
+              {b.price_override_requested_by && <span className="ml-2 text-gray-400 text-xs">by {b.price_override_requested_by}</span>}
+            </div>
+            {b.price_override_status === 'pending' && isManager && (
+              <div className="flex gap-2">
+                <button onClick={approveOverride} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700">Approve</button>
+                <button onClick={rejectOverride} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700">Reject</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -259,10 +398,14 @@ export default function BookingDetail() {
               ['Rate/night', `${b.currency} ${Number(b.room_rate).toLocaleString()}`],
               ['Subtotal (acc.)', `${b.currency} ${Number(b.subtotal - (b.meal_total || 0)).toLocaleString()}`],
               ...(b.meal_total > 0 ? [['Meals', `${b.currency} ${Number(b.meal_total).toLocaleString()}`]] : []),
+              ...(extrasTotal > 0 ? [['Extras', `${b.currency} ${Number(extrasTotal).toLocaleString()}`]] : []),
               ['Tax', `${b.currency} ${Number(b.tax_amount).toLocaleString()}`],
               ['Total', `${b.currency} ${Number(b.total_amount).toLocaleString()}`],
             ].map(([k,v]) => (
-              <div key={k} className="flex justify-between"><dt className="text-gray-400">{k}</dt><dd className="font-medium">{v}</dd></div>
+              <div key={k} className={`flex justify-between ${k === 'Total' ? 'border-t border-gray-100 pt-1 font-semibold text-primary' : ''}`}>
+                <dt className={k === 'Total' ? '' : 'text-gray-400'}>{k}</dt>
+                <dd className="font-medium">{v}</dd>
+              </div>
             ))}
           </dl>
         </div>
@@ -282,6 +425,7 @@ export default function BookingDetail() {
         <button onClick={() => setPayModal(true)} className="bg-gold text-white px-4 py-2 rounded-lg text-sm font-medium">+ Payment</button>
         <button onClick={downloadInvoice} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Invoice PDF</button>
         <button onClick={openEditModal} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Edit Booking</button>
+        <button onClick={() => setOverrideModal(true)} className="border border-amber-400 text-amber-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-50">Override Price</button>
       </div>
 
       {booking.payments?.length > 0 && (
@@ -299,6 +443,215 @@ export default function BookingDetail() {
           </table>
         </div>
       )}
+
+      {/* Extras & Add-ons */}
+      <div className="bg-white rounded-xl border border-gray-200 mb-6">
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 flex-wrap gap-2">
+          <h2 className="font-semibold text-gray-700">Extras & Add-ons</h2>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setAddExtrasType(addExtrasType === 'manual' ? null : 'manual')}
+              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${addExtrasType === 'manual' ? 'bg-gray-700 text-white border-gray-700' : 'border-gray-300 hover:bg-gray-50'}`}
+            >+ Manual Item</button>
+            <button
+              onClick={() => setAddExtrasType(addExtrasType === 'shuttle' ? null : 'shuttle')}
+              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${addExtrasType === 'shuttle' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-indigo-300 text-indigo-700 hover:bg-indigo-50'}`}
+            >+ Shuttle Transfer</button>
+            <button
+              onClick={() => setAddExtrasType(addExtrasType === 'paragliding' ? null : 'paragliding')}
+              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${addExtrasType === 'paragliding' ? 'bg-sky-600 text-white border-sky-600' : 'border-sky-300 text-sky-700 hover:bg-sky-50'}`}
+            >+ Paragliding</button>
+          </div>
+        </div>
+
+        {extras.length === 0 && !addExtrasType ? (
+          <div className="px-5 py-6 text-center text-gray-400 text-sm">No extras added yet</div>
+        ) : (
+          <>
+            {extras.length > 0 && (
+              <div className="divide-y divide-gray-50">
+                {extras.map(extra => (
+                  <div key={extra.id} className="flex items-center gap-3 px-5 py-3">
+                    <span className="text-lg flex-shrink-0">
+                      {extra.type === 'shuttle' ? '🚐' : extra.type === 'paragliding' ? '🪂' : '📦'}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-800 truncate">{extra.description}</div>
+                      {extra.notes && <div className="text-xs text-gray-400">{extra.notes}</div>}
+                      {extra.external_ref && (
+                        <div className="text-xs text-teal-600 font-mono">Ref: {extra.external_ref}</div>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 whitespace-nowrap">{extra.qty} × {b.currency} {Number(extra.unit_price).toLocaleString()}</div>
+                    <div className="text-sm font-semibold text-gray-800 w-28 text-right whitespace-nowrap">{b.currency} {Number(extra.total).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</div>
+                    <button onClick={() => deleteExtra(extra.id)} className="text-gray-300 hover:text-red-500 text-lg leading-none flex-shrink-0" title="Remove">✕</button>
+                  </div>
+                ))}
+                <div className="flex justify-end px-5 py-3 text-sm font-semibold text-primary">
+                  Extras total: {b.currency} {Number(extrasTotal).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+            )}
+
+            {/* Manual item form */}
+            {addExtrasType === 'manual' && (
+              <div className="px-5 py-4 bg-gray-50 border-t border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Add Manual Item</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Description *</label>
+                    <input type="text" value={manualForm.description} onChange={e => setManualForm(p => ({...p, description: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="e.g. Honeymoon package, champagne on arrival" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Qty</label>
+                    <input type="number" min={1} value={manualForm.qty} onChange={e => setManualForm(p => ({...p, qty: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Unit Price ({b.currency})</label>
+                    <input type="number" min={0} step="0.01" value={manualForm.unit_price} onChange={e => setManualForm(p => ({...p, unit_price: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Notes (optional)</label>
+                    <input type="text" value={manualForm.notes} onChange={e => setManualForm(p => ({...p, notes: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-3">
+                  <button onClick={() => setAddExtrasType(null)} className="text-sm px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-white">Cancel</button>
+                  <button onClick={addManualExtra} disabled={extrasLoading || !manualForm.description}
+                    className="text-sm px-4 py-1.5 bg-primary text-white rounded-lg disabled:opacity-50">
+                    {extrasLoading ? 'Adding…' : 'Add Item'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Shuttle transfer form */}
+            {addExtrasType === 'shuttle' && (
+              <div className="px-5 py-4 bg-indigo-50/40 border-t border-gray-100">
+                <h3 className="text-sm font-semibold text-indigo-700 mb-3">🚐 Book Shuttle Transfer</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">From *</label>
+                    <input type="text" value={shuttleForm.from} onChange={e => setShuttleForm(p => ({...p, from: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="e.g. George Airport" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">To *</label>
+                    <input type="text" value={shuttleForm.to} onChange={e => setShuttleForm(p => ({...p, to: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="e.g. Sky Island Resort" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
+                    <input type="date" value={shuttleForm.date} onChange={e => setShuttleForm(p => ({...p, date: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Time</label>
+                    <input type="time" value={shuttleForm.time} onChange={e => setShuttleForm(p => ({...p, time: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Passengers</label>
+                    <input type="number" min={1} value={shuttleForm.pax} onChange={e => setShuttleForm(p => ({...p, pax: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Price ({b.currency})</label>
+                    <input type="number" min={0} step="0.01" value={shuttleForm.price} onChange={e => setShuttleForm(p => ({...p, price: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div className="col-span-2 flex items-center gap-2">
+                    <input type="checkbox" id="return_trip" checked={!!shuttleForm.return_trip}
+                      onChange={e => setShuttleForm(p => ({...p, return_trip: e.target.checked}))} className="h-4 w-4" />
+                    <label htmlFor="return_trip" className="text-sm text-gray-700">Return trip</label>
+                  </div>
+                  {shuttleForm.return_trip && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Return Date</label>
+                        <input type="date" value={shuttleForm.return_date} onChange={e => setShuttleForm(p => ({...p, return_date: e.target.value}))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Return Time</label>
+                        <input type="time" value={shuttleForm.return_time} onChange={e => setShuttleForm(p => ({...p, return_time: e.target.value}))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                      </div>
+                    </>
+                  )}
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Notes (optional)</label>
+                    <input type="text" value={shuttleForm.notes} onChange={e => setShuttleForm(p => ({...p, notes: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-3">
+                  <button onClick={() => setAddExtrasType(null)} className="text-sm px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-white">Cancel</button>
+                  <button onClick={addShuttleExtra} disabled={extrasLoading || !shuttleForm.from || !shuttleForm.to || !shuttleForm.date}
+                    className="text-sm px-4 py-1.5 bg-indigo-600 text-white rounded-lg disabled:opacity-50">
+                    {extrasLoading ? 'Booking…' : 'Book Shuttle'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Paragliding form */}
+            {addExtrasType === 'paragliding' && (
+              <div className="px-5 py-4 bg-sky-50/40 border-t border-gray-100">
+                <h3 className="text-sm font-semibold text-sky-700 mb-3">🪂 Book Paragliding</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
+                    <input type="date" value={pgForm.iso_date} onChange={e => setPgForm(p => ({...p, iso_date: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Time Slot</label>
+                    <input type="text" value={pgForm.time_slot} onChange={e => setPgForm(p => ({...p, time_slot: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="e.g. 09:00" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Group Size</label>
+                    <input type="number" min={1} value={pgForm.group_size} onChange={e => setPgForm(p => ({...p, group_size: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Price per person ({b.currency})</label>
+                    <input type="number" min={0} step="0.01" value={pgForm.price} onChange={e => setPgForm(p => ({...p, price: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Experience Level</label>
+                    <select value={pgForm.experience} onChange={e => setPgForm(p => ({...p, experience: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                      <option value="">Select…</option>
+                      <option value="beginner">Beginner (tandem)</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Notes (optional)</label>
+                    <input type="text" value={pgForm.notes} onChange={e => setPgForm(p => ({...p, notes: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-3">
+                  <button onClick={() => setAddExtrasType(null)} className="text-sm px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-white">Cancel</button>
+                  <button onClick={addPgExtra} disabled={extrasLoading || !pgForm.iso_date}
+                    className="text-sm px-4 py-1.5 bg-sky-600 text-white rounded-lg disabled:opacity-50">
+                    {extrasLoading ? 'Booking…' : 'Book Paragliding'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       <div className="bg-white rounded-xl border border-gray-200 mb-6">
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
@@ -354,9 +707,41 @@ export default function BookingDetail() {
         </div>
       </Modal>
 
+      <Modal open={overrideModal} onClose={() => setOverrideModal(false)} title="Request Price Override">
+        <div className="space-y-4">
+          <div className="text-sm text-gray-500 bg-gray-50 rounded-lg p-3">
+            Current total: <span className="font-semibold text-gray-800">{b.currency} {Number(b.total_amount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">New Total Amount ({b.currency}) *</label>
+            <input type="number" min={0} step="0.01" value={overrideForm.amount}
+              onChange={e => setOverrideForm(p => ({...p, amount: e.target.value}))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              placeholder="Enter override amount" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
+            <textarea rows={3} value={overrideForm.reason}
+              onChange={e => setOverrideForm(p => ({...p, reason: e.target.value}))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              placeholder="Explain the reason for this price override…" />
+          </div>
+          {isManager
+            ? <p className="text-xs text-green-600 bg-green-50 rounded px-3 py-2">As a manager, this override will be applied immediately.</p>
+            : <p className="text-xs text-amber-600 bg-amber-50 rounded px-3 py-2">This request will be sent to a manager for approval before taking effect.</p>
+          }
+        </div>
+        <div className="flex justify-end gap-3 mt-6">
+          <button onClick={() => setOverrideModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+          <button onClick={requestOverride} disabled={overrideLoading || !overrideForm.amount || !overrideForm.reason}
+            className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium disabled:opacity-50">
+            {overrideLoading ? 'Submitting…' : isManager ? 'Apply Override' : 'Request Override'}
+          </button>
+        </div>
+      </Modal>
+
       <Modal open={editModal} onClose={() => setEditModal(false)} title="Edit Booking">
         <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
-          {/* Guest */}
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">Guest</label>
             <div className="flex items-center gap-2 mb-1 text-sm">
@@ -391,7 +776,6 @@ export default function BookingDetail() {
             )}
           </div>
 
-          {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             {[{k:'check_in',l:'Check-in'},{k:'check_out',l:'Check-out'}].map(f => (
               <div key={f.k}>
@@ -402,8 +786,6 @@ export default function BookingDetail() {
             ))}
           </div>
 
-
-          {/* Room Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Room Type</label>
             <select value={editForm.room_type_id || ''} onChange={e => setEditForm(p => ({...p, room_type_id: e.target.value, room_id: ''}))}
@@ -413,7 +795,6 @@ export default function BookingDetail() {
             </select>
           </div>
 
-          {/* Room */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Room</label>
             <select value={editForm.room_id || ''} onChange={e => setEditForm(p => ({...p, room_id: e.target.value}))}
@@ -423,7 +804,6 @@ export default function BookingDetail() {
             </select>
           </div>
 
-          {/* Adults + Children */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Adults</label>
@@ -437,8 +817,6 @@ export default function BookingDetail() {
             </div>
           </div>
 
-
-          {/* Rate Plan */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Rate Plan</label>
             <select value={editForm.rate_plan_id || ''} onChange={e => setEditForm(p => ({...p, rate_plan_id: e.target.value}))}
@@ -455,7 +833,6 @@ export default function BookingDetail() {
             )}
           </div>
 
-          {/* Source */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
             <select value={editForm.source || 'direct'} onChange={e => setEditForm(p => ({...p, source: e.target.value}))}
@@ -466,14 +843,12 @@ export default function BookingDetail() {
             </select>
           </div>
 
-          {/* Special Requests */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Special Requests</label>
             <textarea rows={2} value={editForm.special_requests || ''} onChange={e => setEditForm(p => ({...p, special_requests: e.target.value}))}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
           </div>
 
-          {/* Price Preview */}
           {(editPreview || editPreviewLoading) && (
             <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
               {editPreviewLoading ? (
