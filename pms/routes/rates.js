@@ -657,12 +657,6 @@ router.get('/public', (req, res) => {
     'SELECT * FROM rate_plans WHERE property_id = ? AND room_type_id = ? AND active = 1 AND visible_on_website = 1 ORDER BY name'
   ).all(pid, room_type_id);
 
-  // Load international settings for manual markup calculation
-  const intlSettings = db.prepare(
-    'SELECT markup_percent FROM international_rate_settings WHERE property_id = ?'
-  ).get(pid) || { markup_percent: 30 };
-  const markupPct = parseFloat(intlSettings.markup_percent ?? 30);
-
   const calcParams = {
     property_id: pid,
     adults:      parseInt(adults),
@@ -678,15 +672,15 @@ router.get('/public', (req, res) => {
       // Calculate SADC (no channel = sadc region by default in engine)
       const sadc = calculateRatePlan(db, { ...calcParams, rate_plan_id: plan.id });
 
-      // Compute international by applying markup to sadc total_for_stay
-      // (simpler than a second full engine pass; keeps public endpoint light)
-      const international_total = Math.round(sadc.total_for_stay * (1 + markupPct / 100));
+      // Calculate international using engine with region override so markup is
+      // applied BEFORE season uplift (matching the engine's layer ordering)
+      const intl = calculateRatePlan(db, { ...calcParams, rate_plan_id: plan.id, region: 'international' });
 
       results.push({
         ...plan,
         ...sadc,
         sadc_total:          sadc.total_for_stay,
-        international_total,
+        international_total: intl.total_for_stay,
       });
     } catch (err) {
       console.error(`calculateRatePlan (public) error for plan ${plan.id} (${plan.name}):`, err.message);
