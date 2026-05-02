@@ -12,6 +12,7 @@ export default function NewBooking() {
   const [rooms, setRooms] = useState([]);
   const [saving, setSaving] = useState(false);
   const [ratePlans, setRatePlans] = useState([]);
+  const [rateErrors, setRateErrors] = useState([]);
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [form, setForm] = useState({
