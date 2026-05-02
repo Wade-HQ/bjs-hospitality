@@ -21,7 +21,7 @@ export default function Table({ columns, data, loading, onRowClick }) {
             {columns.map(col => (
               <th
                 key={col.key}
-                className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap"
+                className={`px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap${col.thClassName ? ' ' + col.thClassName : ''}`}
               >
                 {col.label}
               </th>
@@ -47,7 +47,10 @@ export default function Table({ columns, data, loading, onRowClick }) {
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
                 {columns.map(col => (
-                  <td key={col.key} className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  <td
+                    key={col.key}
+                    className={`px-4 py-3 text-sm text-gray-700 whitespace-nowrap${col.tdClassName ? ' ' + col.tdClassName : ''}`}
+                  >
                     {col.render ? col.render(row[col.key], row) : (row[col.key] ?? '—')}
                   </td>
                 ))}
