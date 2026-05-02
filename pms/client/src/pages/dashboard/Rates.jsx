@@ -798,8 +798,8 @@ function PlansTab() {
                 <div className="h-4 bg-teal/10 rounded animate-pulse w-48" />
               ) : preview ? (
                 <p className="text-sm text-gray-700">
-                  Rate: <strong>{fmt(preview.total_per_night)}</strong>
-                  {preview.total_for_stay ? <span className="text-gray-500 text-xs ml-1">/ {fmt(preview.total_for_stay)} for stay</span> : null}
+                  Rate: <strong>{fmt(preview.total_per_night, property?.currency)}</strong>
+                  {preview.total_for_stay ? <span className="text-gray-500 text-xs ml-1">/ {fmt(preview.total_for_stay, property?.currency)} for stay</span> : null}
                   <span className="text-gray-400 text-xs ml-1">(2 adults, 1 night)</span>
                 </p>
               ) : (
