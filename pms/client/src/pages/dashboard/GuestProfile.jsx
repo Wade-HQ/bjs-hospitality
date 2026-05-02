@@ -150,7 +150,7 @@ export default function GuestProfile() {
                 <span className="text-lg">📄</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-gray-800 truncate">{d.file_name}</div>
-                  <div className="text-xs text-gray-400 capitalize">{d.doc_type} · {new Date(d.uploaded_at).toLocaleDateString()}</div>
+                  <div className="text-xs text-gray-400 capitalize">{d.doc_type} · {d.uploaded_at ? new Date(d.uploaded_at).toLocaleDateString() : '—'}</div>
                 </div>
                 <a
                   href={`/api/guests/${id}/documents/${d.id}/download`}
