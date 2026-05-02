@@ -1408,6 +1408,7 @@ function ChannelsTab() {
 
 function PreviewTab() {
   const { addToast } = useToast();
+  const { property } = useProperty();
   const [roomTypes, setRoomTypes] = useState([]);
   const [channels, setChannels] = useState([]);
   const [inputs, setInputs] = useState({
