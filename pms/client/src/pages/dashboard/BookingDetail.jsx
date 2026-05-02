@@ -248,6 +248,152 @@ export default function BookingDetail() {
           <button onClick={addPayment} className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium">Save</button>
         </div>
       </Modal>
+
+      <Modal open={editModal} onClose={() => setEditModal(false)} title="Edit Booking">
+        <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+          {/* Guest */}
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Guest</label>
+            <div className="flex items-center gap-2 mb-1 text-sm">
+              <span className="font-medium text-teal-600">{editForm.guest_name}</span>
+              <span className="text-gray-300">·</span>
+              <button type="button" onClick={() => setGuestSearch('')} className="text-xs text-gray-400 hover:text-gray-600">Change guest</button>
+            </div>
+            <input
+              type="text"
+              placeholder="Search by name or email…"
+              value={guestSearch}
+              onChange={e => setGuestSearch(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
+            {guestResults.length > 0 && (
+              <div className="absolute z-10 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1">
+                {guestResults.map(g => (
+                  <div key={g.id}
+                    className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm flex items-center justify-between"
+                    onClick={() => {
+                      setEditForm(p => ({ ...p, guest_id: g.id, guest_name: `${g.first_name} ${g.last_name}` }));
+                      setGuestSearch('');
+                      setGuestResults([]);
+                    }}
+                  >
+                    <span>{g.first_name} {g.last_name}</span>
+                    {g.email && <span className="text-gray-400 text-xs">{g.email}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-3">
+            {[{k:'check_in',l:'Check-in'},{k:'check_out',l:'Check-out'}].map(f => (
+              <div key={f.k}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{f.l}</label>
+                <input type="date" value={editForm[f.k] || ''} onChange={e => setEditForm(p => ({...p, [f.k]: e.target.value}))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+            ))}
+          </div>
+
+          {/* Region */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+            <select value={editForm.region || 'international'} onChange={e => setEditForm(p => ({...p, region: e.target.value}))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="international">International</option>
+              <option value="sadc">SADC</option>
+            </select>
+          </div>
+
+          {/* Room Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Room Type</label>
+            <select value={editForm.room_type_id || ''} onChange={e => setEditForm(p => ({...p, room_type_id: e.target.value, room_id: ''}))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">Select room type</option>
+              {editRoomTypes.map(rt => <option key={rt.id} value={rt.id}>{rt.name}</option>)}
+            </select>
+          </div>
+
+          {/* Room */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Room</label>
+            <select value={editForm.room_id || ''} onChange={e => setEditForm(p => ({...p, room_id: e.target.value}))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">Keep current / auto-assign</option>
+              {editRooms.map(r => <option key={r.id} value={r.id}>Room {r.room_number}</option>)}
+            </select>
+          </div>
+
+          {/* Adults + Children */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Adults</label>
+              <input type="number" min={1} value={editForm.adults || 1} onChange={e => setEditForm(p => ({...p, adults: parseInt(e.target.value)}))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Children</label>
+              <input type="number" min={0} value={editForm.children || 0} onChange={e => setEditForm(p => ({...p, children: parseInt(e.target.value)}))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            </div>
+          </div>
+
+          {/* Meal Package */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Meal Package</label>
+            <select value={editForm.meal_package_id || ''} onChange={e => setEditForm(p => ({...p, meal_package_id: e.target.value}))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">Room Only</option>
+              {editMealPackages.map(mp => <option key={mp.id} value={mp.id}>{mp.name}</option>)}
+            </select>
+          </div>
+
+          {/* Source */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
+            <select value={editForm.source || 'direct'} onChange={e => setEditForm(p => ({...p, source: e.target.value}))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              {[['direct','Direct'],['booking_com','Booking.com'],['airbnb','Airbnb'],['expedia','Expedia'],['google','Google'],['ota_internal','Other OTA']].map(([v,l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Special Requests */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Special Requests</label>
+            <textarea rows={2} value={editForm.special_requests || ''} onChange={e => setEditForm(p => ({...p, special_requests: e.target.value}))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          </div>
+
+          {/* Price Preview */}
+          {(editPreview || editPreviewLoading) && (
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+              {editPreviewLoading ? (
+                <div className="text-sm text-gray-400 text-center animate-pulse">Calculating…</div>
+              ) : editPreview && (
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between"><span className="text-gray-500">Accommodation</span><span>{editPreview.accommodation_subtotal?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span></div>
+                  {editPreview.meal_total > 0 && <div className="flex justify-between"><span className="text-gray-500">Meals</span><span>{editPreview.meal_total?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span></div>}
+                  <div className="flex justify-between"><span className="text-gray-500">Tax</span><span>{editPreview.tax_amount?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span></div>
+                  <div className="flex justify-between border-t border-gray-200 pt-1 font-semibold text-primary">
+                    <span>New Total</span>
+                    <span>{editPreview.total_amount?.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-3 mt-6">
+          <button onClick={() => setEditModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+          <button onClick={saveEdit} disabled={updating} className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium disabled:opacity-50">
+            {updating ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
