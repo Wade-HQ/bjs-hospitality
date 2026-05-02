@@ -72,6 +72,10 @@ function Skeleton({ rows = 4 }) {
 
 function BaseRatesTab() {
   const { addToast } = useToast();
+  const { property } = useProperty();
+  const [increaseModal, setIncreaseModal] = useState(false);
+  const [increasePct, setIncreasePct] = useState('');
+  const [increaseDate, setIncreaseDate] = useState('');
   const [baseRates, setBaseRates] = useState([]);
   const [intlSettings, setIntlSettings] = useState(null);
   const [loading, setLoading] = useState(true);
