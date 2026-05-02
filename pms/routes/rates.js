@@ -625,6 +625,10 @@ router.get('/calculate', requireAuth, (req, res) => {
   if (!check_in)     return res.status(400).json({ error: 'check_in is required' });
   if (!adults)       return res.status(400).json({ error: 'adults is required' });
 
+  if (check_in && !/^\d{4}-\d{2}-\d{2}$/.test(check_in)) {
+    return res.status(400).json({ error: 'check_in must be YYYY-MM-DD' });
+  }
+
   const activePlans = db.prepare(
     'SELECT * FROM rate_plans WHERE property_id = ? AND room_type_id = ? AND active = 1 ORDER BY name'
   ).all(pid, room_type_id);
