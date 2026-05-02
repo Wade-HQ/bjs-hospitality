@@ -156,18 +156,7 @@ export default function Settings() {
 
   const load = () => {
     api.get('/api/rooms').then(r => setRooms(r.data?.rooms || []));
-    api.get('/api/room-types').then(r => {
-      const rts = r.data?.room_types || [];
-      setRoomTypes(rts);
-      Promise.all(rts.map(rt => api.get(`/api/room-types/${rt.id}/rates`)))
-        .then(results => {
-          const ratesMap = {};
-          results.forEach((res, i) => { ratesMap[rts[i].id] = res.data?.rates || {}; });
-          setRoomTypeRates(ratesMap);
-        });
-    });
-    api.get('/api/meal-packages').then(r => setMealPackages(r.data?.meal_packages || []));
-    api.get('/api/seasonal-adjustments').then(r => setSeasons(r.data?.seasonal_adjustments || []));
+    api.get('/api/room-types').then(r => setRoomTypes(r.data?.room_types || []));
   };
 
   useEffect(() => {
