@@ -15,6 +15,16 @@ export default function BookingDetail() {
   const [payModal, setPayModal] = useState(false);
   const [pay, setPay] = useState({ amount:'', payment_method:'bank_transfer', payment_date: new Date().toISOString().slice(0,10), reference:'' });
 
+  const [editModal, setEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [editRoomTypes, setEditRoomTypes] = useState([]);
+  const [editRooms, setEditRooms] = useState([]);
+  const [editMealPackages, setEditMealPackages] = useState([]);
+  const [editPreview, setEditPreview] = useState(null);
+  const [editPreviewLoading, setEditPreviewLoading] = useState(false);
+  const [guestSearch, setGuestSearch] = useState('');
+  const [guestResults, setGuestResults] = useState([]);
+
   const load = () => { api.get(`/api/bookings/${id}`).then(r => setBooking(r.data)).finally(() => setLoading(false)); };
   useEffect(load, [id]);
 
