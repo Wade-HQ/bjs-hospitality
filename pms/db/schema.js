@@ -353,6 +353,102 @@ async function runMigrations(db) {
 
     CREATE INDEX IF NOT EXISTS idx_meal_packages_property
       ON meal_packages(property_id);
+
+    -- ── Step 2: New 6-layer rates architecture ───────────────────────────────
+
+    CREATE TABLE IF NOT EXISTS room_base_rates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      property_id INTEGER NOT NULL,
+      room_type_id INTEGER NOT NULL REFERENCES room_types(id),
+      room_type_name TEXT NOT NULL,
+      rate_per_person REAL NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'ZAR',
+      max_occupancy INTEGER,
+      active INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(property_id, room_type_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS international_rate_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      property_id INTEGER NOT NULL UNIQUE,
+      markup_percent REAL NOT NULL DEFAULT 30,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      children_meal_pct REAL NOT NULL DEFAULT 50,
+      children_room_pct REAL NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS meal_components (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      property_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      cost_per_person REAL NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'ZAR',
+      active INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
+      sort_order INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS rate_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      property_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      room_type_id INTEGER NOT NULL REFERENCES room_types(id),
+      meal_components_json TEXT NOT NULL DEFAULT '[]',
+      visible_on_website INTEGER NOT NULL DEFAULT 1,
+      visible_on_backoffice INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
+      sort_order INTEGER DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS seasons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      property_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      uplift_percent REAL NOT NULL DEFAULT 0,
+      applies_to_sadc INTEGER NOT NULL DEFAULT 1,
+      applies_to_international INTEGER NOT NULL DEFAULT 1,
+      applies_to_channels INTEGER NOT NULL DEFAULT 1,
+      active INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS channels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      property_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'ota' CHECK(type IN ('ota','agent','seo','direct')),
+      markup_percent REAL NOT NULL DEFAULT 0,
+      base_region TEXT NOT NULL DEFAULT 'sadc' CHECK(base_region IN ('sadc','international')),
+      currency TEXT NOT NULL DEFAULT 'ZAR',
+      active INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS channel_rate_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      channel_id INTEGER NOT NULL REFERENCES channels(id),
+      rate_plan_id INTEGER NOT NULL REFERENCES rate_plans(id),
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(channel_id, rate_plan_id)
+    );
   `);
 
   // ── Column migrations (idempotent — SQLite throws if column already exists) ──
