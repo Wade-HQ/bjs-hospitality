@@ -20,6 +20,7 @@ export default function BookingDetail() {
   const [editRoomTypes, setEditRoomTypes] = useState([]);
   const [editRooms, setEditRooms] = useState([]);
   const [editMealPackages, setEditMealPackages] = useState([]);
+  const [editRatePlans, setEditRatePlans] = useState([]);
   const [editPreview, setEditPreview] = useState(null);
   const [editPreviewLoading, setEditPreviewLoading] = useState(false);
   const [guestSearch, setGuestSearch] = useState('');
