@@ -189,7 +189,7 @@ export default function NewBooking() {
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Accommodation</span>
-                    <span className="font-medium">{Number(preview.total_for_stay).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                    <span className="font-medium">{Number(preview.subtotal).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
                   </div>
                   {preview.meal_total > 0 && (
                     <div className="flex justify-between">
@@ -197,14 +197,22 @@ export default function NewBooking() {
                       <span className="font-medium">{Number(preview.meal_total).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Tax</span>
-                    <span>{Number(preview.tax_amount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
-                  </div>
+                  {preview.tax_inclusive === 0 && preview.tax_amount > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">{property?.tax_label || 'VAT'}</span>
+                      <span>+ {Number(preview.tax_amount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t border-gray-200 pt-1">
                     <span className="font-semibold text-primary">Total</span>
                     <span className="font-bold text-primary text-base">{Number(preview.total_amount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
                   </div>
+                  {preview.tax_inclusive === 1 && preview.tax_amount > 0 && (
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span>of which {property?.tax_label || 'VAT'}</span>
+                      <span>{Number(preview.tax_amount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
                   {preview.season_name && (
                     <div className="text-xs text-amber-600 mt-1">* {preview.season_name} adjustment applied</div>
                   )}
