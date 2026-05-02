@@ -300,6 +300,39 @@ export default function BookingDetail() {
         </div>
       )}
 
+      <div className="bg-white rounded-xl border border-gray-200 mb-6">
+        <div className="flex items-center justify-between p-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-700">Guest Documents</h2>
+          <div className="flex items-center gap-2">
+            <select value={docType} onChange={e => setDocType(e.target.value)} className="text-sm border border-gray-200 rounded px-2 py-1">
+              {['passport','id_card','drivers_license','visa','other'].map(t => <option key={t} value={t}>{t.replace('_',' ')}</option>)}
+            </select>
+            <input ref={fileInputRef} type="file" className="hidden" onChange={e => uploadDocument(e.target.files[0])} />
+            <button onClick={() => fileInputRef.current?.click()} disabled={docUploading} className="text-sm bg-primary text-white px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50">
+              {docUploading ? 'Uploading…' : '+ Upload'}
+            </button>
+          </div>
+        </div>
+        {documents.length === 0 ? (
+          <div className="px-5 py-6 text-center text-gray-400 text-sm">No documents on file</div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {documents.map(d => (
+              <div key={d.id} className="flex items-center justify-between px-5 py-3">
+                <div>
+                  <div className="text-sm font-medium text-gray-800">{d.file_name}</div>
+                  <div className="text-xs text-gray-400">{d.doc_type} · {new Date(d.uploaded_at).toLocaleDateString()}</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <a href={`/api/guests/${b.guest_id}/documents/${d.id}/download`} target="_blank" rel="noreferrer" className="text-xs text-teal hover:underline">Download</a>
+                  <button onClick={() => deleteDocument(d.id)} className="text-xs text-red-400 hover:underline">Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <Modal open={payModal} onClose={() => setPayModal(false)} title="Record Payment">
         <div className="space-y-4">
           {[{label:'Amount',type:'number',key:'amount'},{label:'Date',type:'date',key:'payment_date'},{label:'Reference',type:'text',key:'reference'}].map(f => (
