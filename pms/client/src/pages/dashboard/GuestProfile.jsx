@@ -69,6 +69,12 @@ export default function GuestProfile() {
 
   return (
     <div className="max-w-5xl">
+      {bookings.length > 1 && (
+        <div className="mb-4 flex items-center gap-3 bg-teal-50 border border-teal-200 rounded-xl px-5 py-3 text-sm text-teal-700 font-medium">
+          <span className="text-lg">★</span>
+          Returning guest — {bookings.length} stays on record. Documents may already be on file below.
+        </div>
+      )}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-gray-600 text-xl">←</button>
         <h1 className="text-2xl font-bold text-primary">{guest.first_name} {guest.last_name}</h1>
