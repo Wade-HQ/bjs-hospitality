@@ -90,12 +90,14 @@ function getBookingById(db, id) {
            r.room_number, r.floor, r.status as room_status,
            rt.name as room_type_name, rt.max_occupancy,
            p.name as property_name, p.currency as property_currency,
-           p.tax_label, p.tax_rate as property_tax_rate
+           p.tax_label, p.tax_rate as property_tax_rate,
+           rp.name AS rate_plan_name
     FROM bookings b
     LEFT JOIN guests g ON g.id = b.guest_id
     LEFT JOIN rooms r ON r.id = b.room_id
     LEFT JOIN room_types rt ON rt.id = b.room_type_id
     LEFT JOIN properties p ON p.id = b.property_id
+    LEFT JOIN rate_plans rp ON rp.id = b.rate_plan_id
     WHERE b.id = ? AND b.property_id = ?
   `).get(id, PROPERTY_ID());
 }
