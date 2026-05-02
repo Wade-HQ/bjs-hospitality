@@ -110,6 +110,68 @@ export default function GuestProfile() {
         )}
       </div>
 
+      {/* Documents */}
+      <div className="bg-white rounded-xl border border-gray-200 mb-6">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-700">Documents</h2>
+          <div className="flex items-center gap-2">
+            <select
+              value={docType}
+              onChange={e => setDocType(e.target.value)}
+              className="text-sm border border-gray-300 rounded-lg px-2 py-1.5"
+            >
+              <option value="passport">Passport</option>
+              <option value="id">ID Card</option>
+              <option value="vehicle">Vehicle Doc</option>
+              <option value="other">Other</option>
+            </select>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              className="hidden"
+              onChange={e => uploadDocument(e.target.files[0])}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+            >
+              {uploading ? 'Uploading…' : '+ Upload'}
+            </button>
+          </div>
+        </div>
+        {documents.length === 0 ? (
+          <div className="px-5 py-6 text-center text-gray-400 text-sm">No documents on file</div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {documents.map(d => (
+              <div key={d.id} className="flex items-center gap-3 px-5 py-3">
+                <span className="text-lg">📄</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-gray-800 truncate">{d.file_name}</div>
+                  <div className="text-xs text-gray-400 capitalize">{d.doc_type} · {new Date(d.uploaded_at).toLocaleDateString()}</div>
+                </div>
+                <a
+                  href={`/api/guests/${id}/documents/${d.id}/download`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-teal-600 hover:underline font-medium"
+                >
+                  Download
+                </a>
+                <button
+                  onClick={() => deleteDocument(d.id)}
+                  className="text-xs text-red-400 hover:text-red-600 hover:underline"
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="bg-white rounded-xl border border-gray-200">
         <h2 className="font-semibold text-gray-700 p-4 border-b border-gray-100">Booking History ({bookings.length})</h2>
         <table className="w-full text-sm">
