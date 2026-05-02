@@ -625,6 +625,7 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
 
   if (check_in || check_out || discount_amount !== undefined || extras_json !== undefined ||
       region !== undefined || meal_package_id !== undefined ||
+      rate_plan_id !== undefined ||
       adults !== undefined || children !== undefined) {
     const ciDate = new Date(newCheckIn);
     const coDate = new Date(newCheckOut);
@@ -636,26 +637,55 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
     const extrasTotal = extras.reduce((sum, e) => sum + ((e.quantity || 1) * (e.unit_price || 0)), 0);
     const disc = discount_amount !== undefined ? parseFloat(discount_amount) : (existing.discount_amount || 0);
 
-    try {
-      const pricing = calculateBookingPrice(db, {
-        property_id: PROPERTY_ID(),
-        room_type_id: room_type_id || existing.room_type_id,
-        region: region !== undefined ? region : (existing.region || 'international'),
-        check_in: newCheckIn,
-        check_out: newCheckOut,
-        nights,
-        adults: parseInt(adults !== undefined ? adults : existing.adults),
-        children: parseInt(children !== undefined ? children : existing.children),
-        meal_package_id: meal_package_id !== undefined ? meal_package_id : existing.meal_package_id,
-      });
-      subtotal = pricing.accommodation_subtotal + pricing.meal_total + extrasTotal - disc;
-      const taxRate = existing.tax_rate || 0;
-      taxAmount = subtotal * (taxRate / 100);
-      totalAmount = subtotal + taxAmount;
-    } catch (e) {
-      subtotal = existing.subtotal;
-      taxAmount = existing.tax_amount;
-      totalAmount = existing.total_amount;
+    // Determine effective rate_plan_id: new value, existing value, or null
+    const effectiveRatePlanId = rate_plan_id !== undefined
+      ? (rate_plan_id || null)
+      : (existing.rate_plan_id || null);
+
+    if (effectiveRatePlanId) {
+      // New rate plan path
+      try {
+        const rpResult = calculateRatePlan(db, {
+          property_id: PROPERTY_ID(),
+          rate_plan_id: parseInt(effectiveRatePlanId),
+          adults: parseInt(adults !== undefined ? adults : existing.adults),
+          children: parseInt(children !== undefined ? children : (existing.children || 0)),
+          nights,
+          check_in: newCheckIn,
+        });
+        const taxRate = existing.tax_rate || 0;
+        const taxAmt = Math.round(rpResult.total_for_stay * (taxRate / 100));
+        subtotal = rpResult.total_for_stay + extrasTotal - disc;
+        taxAmount = subtotal * (taxRate / 100);
+        totalAmount = subtotal + taxAmount;
+      } catch (e) {
+        subtotal = existing.subtotal;
+        taxAmount = existing.tax_amount;
+        totalAmount = existing.total_amount;
+      }
+    } else {
+      // Legacy path
+      try {
+        const pricing = calculateBookingPrice(db, {
+          property_id: PROPERTY_ID(),
+          room_type_id: room_type_id || existing.room_type_id,
+          region: region !== undefined ? region : (existing.region || 'international'),
+          check_in: newCheckIn,
+          check_out: newCheckOut,
+          nights,
+          adults: parseInt(adults !== undefined ? adults : existing.adults),
+          children: parseInt(children !== undefined ? children : existing.children),
+          meal_package_id: meal_package_id !== undefined ? meal_package_id : existing.meal_package_id,
+        });
+        subtotal = pricing.accommodation_subtotal + pricing.meal_total + extrasTotal - disc;
+        const taxRate = existing.tax_rate || 0;
+        taxAmount = subtotal * (taxRate / 100);
+        totalAmount = subtotal + taxAmount;
+      } catch (e) {
+        subtotal = existing.subtotal;
+        taxAmount = existing.tax_amount;
+        totalAmount = existing.total_amount;
+      }
     }
   }
 
