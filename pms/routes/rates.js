@@ -519,6 +519,10 @@ router.put('/channels/:id', requireAuth, requireRole(...WRITE_ROLES), (req, res)
 
   const { name, markup_percent, base_region, active, description } = req.body;
 
+  if (name !== undefined && !name.trim()) {
+    return res.status(400).json({ error: 'name cannot be empty' });
+  }
+
   if (markup_percent !== undefined && !Number.isFinite(parseFloat(markup_percent))) {
     return res.status(400).json({ error: 'markup_percent must be a number' });
   }
