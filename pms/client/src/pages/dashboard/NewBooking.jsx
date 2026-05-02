@@ -150,7 +150,7 @@ export default function NewBooking() {
                 </option>
                 {ratePlans.map(p => (
                   <option key={p.id} value={p.id}>
-                    {p.rate_plan_name} — ZAR {Number(p.total_for_stay).toLocaleString()} total
+                    {p.rate_plan_name} — {property?.currency || 'ZAR'} {Number(p.total_for_stay).toLocaleString()} total
                   </option>
                 ))}
               </select>
