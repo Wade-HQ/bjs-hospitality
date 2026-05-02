@@ -7,6 +7,7 @@ import { useProperty } from '../../contexts/PropertyContext.jsx';
 export default function NewBooking() {
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const { property } = useProperty();
   const [roomTypes, setRoomTypes] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [saving, setSaving] = useState(false);
