@@ -12,6 +12,7 @@ const STATUS_COLORS = {
 };
 
 const BED_OPTIONS = [
+  // Single bedroom
   '1 King Bed',
   '2 King Beds',
   '2 Singles / Twin',
@@ -26,6 +27,16 @@ const BED_OPTIONS = [
   '1 King + Bunk Bed',
   '2 Singles + Sofa Bed',
   '2 Singles + Bunk Bed',
+  // Two-bedroom configurations
+  '2BR: 1 King (BR1) + 2 Singles (BR2)',
+  '2BR: 1 King (BR1) + Double (BR2)',
+  '2BR: 2 Singles (BR1) + 2 Singles (BR2)',
+  '2BR: 1 King OR 2 Singles (BR1) + Double (BR2)',
+  '2BR: 1 King OR 2 Singles (BR1) + Double + Bunk (BR2)',
+  '2BR: 1 King OR 2 Singles (BR1) + 2 Singles + Bunk (BR2)',
+  '2BR: 1 King OR 2 Singles (BR1) + Bunk Bed (BR2)',
+  '2BR: Double (BR1) + Bunk Bed (BR2)',
+  '2BR: Double + Bunk (BR1) + 2 Singles (BR2)',
 ];
 
 const AMENITIES = [
