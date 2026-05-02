@@ -24,6 +24,10 @@ function calculateRatePlan(db, params) {
   const check_in     = params.check_in;   // 'YYYY-MM-DD'
   const channel_id   = params.channel_id != null ? parseInt(params.channel_id) : null;
 
+  if (channel_id !== null && !Number.isFinite(channel_id)) {
+    throw new Error('channel_id must be a positive integer');
+  }
+
   if (!Number.isFinite(property_id)  || property_id  < 1) throw new Error('property_id must be a positive integer');
   if (!Number.isFinite(rate_plan_id) || rate_plan_id < 1) throw new Error('rate_plan_id must be a positive integer');
   if (!Number.isFinite(adults)       || adults       < 1) throw new Error('adults must be >= 1');
