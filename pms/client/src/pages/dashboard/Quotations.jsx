@@ -27,9 +27,10 @@ export default function Quotations() {
   const [converting, setConverting] = useState(null);
   const [form, setForm] = useState({
     check_in: '', check_out: '', room_type_id: '', adults: 1, children: 0,
-    rate_plan_id: '',
+    rate_plan_id: '', region: 'sadc',
     guest_name: '', guest_email: '', guest_phone: '', special_requests: '',
   });
+  const [rateErrors, setRateErrors] = useState([]);
 
   const currency = property?.currency || 'ZAR';
 
