@@ -43,6 +43,8 @@ function calculateRatePlan(db, params) {
     'SELECT * FROM room_types WHERE id = ? AND property_id = ?'
   ).get(ratePlan.room_type_id, property_id);
 
+  if (!roomType) throw new Error(`Room type ${ratePlan.room_type_id} not found`);
+
   const roomBaseRate = db.prepare(
     'SELECT * FROM room_base_rates WHERE room_type_id = ? AND property_id = ?'
   ).get(ratePlan.room_type_id, property_id);
