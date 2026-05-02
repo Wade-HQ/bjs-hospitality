@@ -675,7 +675,23 @@ export default function Settings() {
               {s.fields.map(f => (
                 <div key={f.k} className={f.k === 'payment_instructions' ? 'col-span-2' : ''}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{f.l}</label>
-                  {f.k === 'payment_instructions' ? (
+                  {f.t === 'select' ? (
+                    <select value={form[f.k] || ''} onChange={e => setForm(p => ({ ...p, [f.k]: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                      {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  ) : f.t === 'toggle' ? (
+                    <button
+                      type="button"
+                      onClick={() => setForm(p => ({ ...p, [f.k]: p[f.k] ? 0 : 1 }))}
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors w-full ${form[f.k] ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-600'}`}
+                    >
+                      <span className={`w-9 h-5 rounded-full relative transition-colors ${form[f.k] ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form[f.k] ? 'left-4' : 'left-0.5'}`} />
+                      </span>
+                      {form[f.k] ? f.onLabel : f.offLabel}
+                    </button>
+                  ) : f.k === 'payment_instructions' ? (
                     <textarea rows={3} value={form[f.k] || ''}
                       onChange={e => setForm(p => ({ ...p, [f.k]: e.target.value }))}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
