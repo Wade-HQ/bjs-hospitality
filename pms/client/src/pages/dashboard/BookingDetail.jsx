@@ -209,6 +209,7 @@ export default function BookingDetail() {
         {['provisional','confirmed'].includes(b.status) && <button onClick={() => updateStatus('cancelled')} disabled={updating} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium">Cancel</button>}
         <button onClick={() => setPayModal(true)} className="bg-gold text-white px-4 py-2 rounded-lg text-sm font-medium">+ Payment</button>
         <button onClick={downloadInvoice} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Invoice PDF</button>
+        <button onClick={openEditModal} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Edit Booking</button>
       </div>
 
       {booking.payments?.length > 0 && (
