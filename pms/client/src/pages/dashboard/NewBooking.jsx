@@ -52,9 +52,10 @@ export default function NewBooking() {
       .then(r => {
         const plans = r.data?.rate_plans || [];
         setRatePlans(plans);
+        setRateErrors(r.data?.calc_errors || []);
         if (plans.length === 1) setForm(p => ({ ...p, rate_plan_id: String(plans[0].id) }));
       })
-      .catch(() => setRatePlans([]));
+      .catch(() => { setRatePlans([]); setRateErrors([]); });
   }, [form.room_type_id, form.check_in, form.check_out, form.adults, form.children]);
 
   // Price preview when rate_plan_id is set
