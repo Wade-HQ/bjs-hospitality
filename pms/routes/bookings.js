@@ -717,6 +717,7 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
       region = COALESCE(?, region),
       meal_package_id = COALESCE(?, meal_package_id),
       source = COALESCE(?, source),
+      rate_plan_id = COALESCE(?, rate_plan_id),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ? AND property_id = ?
   `).run(
@@ -732,6 +733,7 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
     status || null, payment_status || null,
     guest_id !== undefined ? guest_id : null, region !== undefined ? region : null,
     meal_package_id !== undefined ? (meal_package_id || null) : null, source || null,
+    rate_plan_id !== undefined ? (rate_plan_id ? parseInt(rate_plan_id) : null) : null,
     req.params.id, PROPERTY_ID()
   );
 
