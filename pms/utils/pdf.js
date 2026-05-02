@@ -53,6 +53,19 @@ function generateInvoicePdf(invoice, property, booking, guest) {
   const taxAmount = Number(invoice.tax_amount) || 0;
   const total = Number(invoice.total_amount) || 0;
 
+  const logoBlock = property.logo_url
+    ? `<img src="${property.logo_url}" alt="${property.name}" style="max-height:60px;max-width:220px;object-fit:contain;display:block;margin-bottom:6px;" />`
+    : `<div class="property-name">${property.name}</div>`;
+
+  const bankBlock = (property.bank_name || property.bank_account) ? `
+    <div class="bank-section">
+      <h4>Banking Details</h4>
+      ${property.bank_name ? `<div><strong>${property.bank_name}</strong></div>` : ''}
+      ${property.bank_account ? `<div>Account: ${property.bank_account}</div>` : ''}
+      ${property.bank_branch ? `<div>Branch: ${property.bank_branch}</div>` : ''}
+      ${property.swift_code ? `<div>SWIFT: ${property.swift_code}</div>` : ''}
+    </div>` : '';
+
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -92,18 +105,22 @@ function generateInvoicePdf(invoice, property, booking, guest) {
     .totals .total-row td { font-weight: bold; font-size: 15px; border-top: 2px solid #1B4332; color: #1B4332; }
     .notes { margin-top: 30px; padding: 16px; background: #f9fafb; border-radius: 6px; font-size: 13px; }
     .notes h4 { font-weight: bold; margin-bottom: 6px; }
+    .bank-section { margin-top: 20px; padding: 14px 16px; background: #f0fdf4; border-left: 3px solid #1B4332; border-radius: 4px; font-size: 13px; }
+    .bank-section h4 { font-size: 12px; text-transform: uppercase; color: #1B4332; margin-bottom: 6px; font-weight: bold; }
+    .bank-section div { margin-bottom: 2px; }
     .footer { margin-top: 40px; font-size: 11px; color: #aaa; text-align: center; border-top: 1px solid #eee; padding-top: 16px; }
   </style>
 </head>
 <body>
   <div class="header">
     <div>
-      <div class="property-name">${property.name}</div>
+      ${logoBlock}
       <div class="property-details">
         ${property.address ? property.address + '<br>' : ''}
         ${property.contact_email ? property.contact_email + '  ' : ''}
         ${property.contact_phone ? property.contact_phone : ''}
         ${property.vat_number ? '<br>VAT/Tax No: ' + property.vat_number : ''}
+        ${property.company_reg ? '<br>Reg No: ' + property.company_reg : ''}
       </div>
     </div>
     <div>
@@ -174,9 +191,10 @@ function generateInvoicePdf(invoice, property, booking, guest) {
     ${property.payment_instructions ? `<h4 style="margin-top:${invoice.notes ? '12px' : '0'};">Payment Instructions</h4><p>${property.payment_instructions}</p>` : ''}
   </div>` : ''}
 
+  ${bankBlock}
+
   <div class="footer">
-    ${property.name} &mdash; ${property.domain || ''}<br>
-    Thank you for your business.
+    ${property.invoice_footer || (property.name + (property.domain ? ' &mdash; ' + property.domain : '') + '<br>Thank you for your business.')}
   </div>
 </body>
 </html>`;
