@@ -443,6 +443,67 @@ export default function Settings() {
         );
       })()}
 
+      {/* ── INVOICE TEMPLATE ── */}
+      {activeSection === 'template' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="font-semibold text-gray-700 mb-1">Invoice &amp; Quotation Template</h2>
+          <p className="text-xs text-gray-400 mb-4">These details appear on all generated PDFs — invoices and quotations.</p>
+
+          {/* Logo preview */}
+          {form.logo_url && (
+            <div className="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200 inline-block">
+              <img src={form.logo_url} alt="Logo preview" className="h-12 max-w-xs object-contain" onError={e => e.target.style.display='none'} />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            {templateFields.map(f => (
+              <div key={f.k} className={f.wide ? 'col-span-2' : ''}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {f.l}
+                  {f.hint && <span className="text-xs text-gray-400 font-normal ml-2">{f.hint}</span>}
+                </label>
+                {f.wide ? (
+                  <textarea
+                    rows={3}
+                    value={form[f.k] || ''}
+                    onChange={e => setForm(p => ({ ...p, [f.k]: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                ) : (
+                  <input
+                    type={f.t || 'text'}
+                    value={form[f.k] || ''}
+                    onChange={e => setForm(p => ({ ...p, [f.k]: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Bank details preview card */}
+          {(form.bank_name || form.bank_account) && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+              <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Banking Details Preview</p>
+              <div className="text-sm text-gray-700 space-y-0.5">
+                {form.bank_name && <div><span className="text-gray-500">Bank:</span> {form.bank_name}</div>}
+                {form.bank_account && <div><span className="text-gray-500">Account:</span> {form.bank_account}</div>}
+                {form.bank_branch && <div><span className="text-gray-500">Branch:</span> {form.bank_branch}</div>}
+                {form.swift_code && <div><span className="text-gray-500">SWIFT:</span> {form.swift_code}</div>}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-5 pt-4 border-t border-gray-100">
+            <button onClick={save} disabled={saving}
+              className="bg-gold text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 disabled:opacity-50 text-sm">
+              {saving ? 'Saving…' : 'Save Template Settings'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── ADD/EDIT ROOM MODAL ── */}
       <Modal open={roomModal} onClose={() => setRoomModal(false)}
         title={roomForm.id ? 'Edit Room' : 'Add Room'}>
