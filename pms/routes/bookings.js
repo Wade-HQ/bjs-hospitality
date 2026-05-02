@@ -585,7 +585,7 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager','front_desk'
     adults, children, special_requests, internal_notes,
     channel_booking_ref, status, payment_status,
     discount_amount, extras_json,
-    guest_id, region, meal_package_id, source,
+    guest_id, region, meal_package_id, source, rate_plan_id,
   } = req.body;
 
   if (guest_id !== undefined) {
