@@ -206,6 +206,7 @@ router.get('/price-preview', requireAuth, (req, res) => {
         children: parseInt(children || 0),
         nights,
         check_in,
+        region: region || undefined,
       });
       const property = db.prepare('SELECT tax_rate, tax_inclusive FROM properties WHERE id = ?').get(PROPERTY_ID());
       const taxRate = parseFloat(property?.tax_rate ?? 0);
