@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/index.js';
 import { useProperty } from '../../contexts/PropertyContext.jsx';
+import StatusBadge from '../../components/StatusBadge.jsx';
 
 const TABS = [
   { id: 'revenue',             label: 'Revenue' },
@@ -9,6 +11,7 @@ const TABS = [
   { id: 'payments',            label: 'Payments' },
   { id: 'commissions',         label: 'Commissions' },
   { id: 'guests',              label: 'Guests' },
+  { id: 'cancelled',           label: 'Cancelled' },
 ];
 
 function SummaryCard({ label, value }) {
@@ -248,6 +251,76 @@ function GuestsReport({ data }) {
   );
 }
 
+function CancelledReport({ currency, params }) {
+  const navigate = useNavigate();
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const fmt = n => Number(n || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2 });
+
+  useEffect(() => {
+    setLoading(true);
+    api.get('/api/reports/cancelled', { params: { from: params.from, to: params.to } })
+      .then(r => setBookings(r.data?.bookings || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [params.from, params.to]);
+
+  if (loading) return <div className="p-12 text-center text-gray-400 animate-pulse">Loading…</div>;
+
+  return (
+    <div className="space-y-4 p-4">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-gray-500">{bookings.length} cancelled / no-show booking{bookings.length !== 1 ? 's' : ''}</div>
+      </div>
+      {bookings.length === 0 ? (
+        <div className="p-8 text-center text-gray-400 text-sm">No cancelled bookings for this period</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
+              <tr>
+                <th className="px-4 py-3 text-left whitespace-nowrap">Ref</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap">Guest</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap">Room</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap">Stay</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap">Total</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap">Cancelled</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {bookings.map(b => (
+                <tr
+                  key={b.id}
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => navigate(`/dashboard/bookings/${b.id}`)}
+                >
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500">{b.booking_ref || `#${b.id}`}</td>
+                  <td className="px-4 py-3 font-medium text-gray-700">{b.guest_name?.trim() || '—'}</td>
+                  <td className="px-4 py-3 text-gray-600">{b.room_number || b.room_type_name || '—'}</td>
+                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                    {b.check_in?.slice(0, 10)} – {b.check_out?.slice(0, 10)}
+                    <span className="text-xs text-gray-400 ml-1">({b.nights}n)</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                      b.status === 'no_show' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {b.status === 'no_show' ? 'No Show' : 'Cancelled'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-medium">{currency} {fmt(b.total_amount)}</td>
+                  <td className="px-4 py-3 text-xs text-gray-400">{b.updated_at?.slice(0, 10) || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Reports() {
   const { property } = useProperty();
   const [tab, setTab] = useState('revenue');
@@ -266,6 +339,7 @@ export default function Reports() {
   const currency = property?.currency || 'ZAR';
 
   useEffect(() => {
+    if (tab === 'cancelled') return;
     setLoading(true);
     setData(null);
     setError(null);
@@ -276,6 +350,7 @@ export default function Reports() {
   }, [tab, params]);
 
   const renderReport = () => {
+    if (tab === 'cancelled') return <CancelledReport currency={currency} params={params} />;
     if (!data) return null;
     switch (tab) {
       case 'revenue':            return <RevenueReport data={data} currency={currency} />;
@@ -292,7 +367,6 @@ export default function Reports() {
     <div>
       <h1 className="text-2xl font-bold text-primary mb-6">Reports</h1>
 
-      {/* Date range */}
       <div className="flex gap-3 mb-6 flex-wrap items-center">
         <input type="date" value={params.from}
           onChange={e => setParams(p => ({ ...p, from: e.target.value }))}
@@ -303,14 +377,17 @@ export default function Reports() {
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 flex-wrap">
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === t.id ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-700'
+              tab === t.id
+                ? t.id === 'cancelled'
+                  ? 'bg-white shadow text-red-600'
+                  : 'bg-white shadow text-primary'
+                : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             {t.label}
@@ -318,18 +395,15 @@ export default function Reports() {
         ))}
       </div>
 
-      {/* Content */}
       <div className="bg-white rounded-xl border border-gray-200 min-h-32">
-        {loading ? (
+        {tab !== 'cancelled' && loading ? (
           <div className="p-12 text-center text-gray-400 animate-pulse">Loading…</div>
-        ) : error ? (
+        ) : tab !== 'cancelled' && error ? (
           <div className="p-12 text-center">
             <div className="text-red-500 text-sm mb-2">{error}</div>
           </div>
-        ) : data ? (
-          renderReport()
         ) : (
-          <div className="p-12 text-center text-gray-400 text-sm">No data for this period</div>
+          renderReport()
         )}
       </div>
     </div>
