@@ -156,6 +156,13 @@ export default function NewBooking() {
                   </option>
                 ))}
               </select>
+              {rateErrors.length > 0 && (
+                <div className="mt-1 space-y-0.5">
+                  {rateErrors.map((e, i) => (
+                    <div key={i} className="text-xs text-red-600">⚠ {e.plan_name}: {e.error}</div>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
