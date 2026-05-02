@@ -472,6 +472,7 @@ async function runMigrations(db) {
     `ALTER TABLE bookings ADD COLUMN region TEXT CHECK(region IN ('international', 'sadc'))`,
     `ALTER TABLE bookings ADD COLUMN meal_package_id INTEGER REFERENCES meal_packages(id)`,
     `ALTER TABLE bookings ADD COLUMN meal_total REAL NOT NULL DEFAULT 0`,
+    `ALTER TABLE bookings ADD COLUMN rate_plan_id INTEGER REFERENCES rate_plans(id)`,
   ];
   for (const sql of bookingRateMigrations) {
     try { db.exec(sql); } catch (_) { /* column already exists */ }
