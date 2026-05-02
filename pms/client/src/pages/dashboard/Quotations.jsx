@@ -216,6 +216,14 @@ export default function Quotations() {
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Region / Guest Type</label>
+                <select value={form.region} onChange={e => setField('region', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="sadc">SADC (local rate)</option>
+                  <option value="international">International</option>
+                </select>
+              </div>
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Rate Plan</label>
                 <select value={form.rate_plan_id} onChange={e => setField('rate_plan_id', e.target.value)}
@@ -231,6 +239,13 @@ export default function Quotations() {
                     </option>
                   ))}
                 </select>
+                {rateErrors.length > 0 && (
+                  <div className="mt-1 text-xs text-red-600 space-y-0.5">
+                    {rateErrors.map((e, i) => (
+                      <div key={i}>⚠ {e.plan_name}: {e.error}</div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
