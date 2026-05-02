@@ -430,17 +430,19 @@ router.put('/seasons/:id', requireAuth, requireRole(...WRITE_ROLES), (req, res) 
       applies_to_sadc        = COALESCE(?, applies_to_sadc),
       applies_to_international = COALESCE(?, applies_to_international),
       applies_to_channels    = COALESCE(?, applies_to_channels),
-      active                 = COALESCE(?, active)
+      active                 = COALESCE(?, active),
+      notes                  = COALESCE(?, notes)
     WHERE id = ? AND property_id = ?
   `).run(
-    name                   !== undefined ? name.trim()                         : null,
-    start_date             !== undefined ? start_date                          : null,
-    end_date               !== undefined ? end_date                            : null,
-    uplift_percent         !== undefined ? parseFloat(uplift_percent)          : null,
-    applies_to_sadc        !== undefined ? (applies_to_sadc ? 1 : 0)          : null,
+    name                   !== undefined ? name.trim()                           : null,
+    start_date             !== undefined ? start_date                            : null,
+    end_date               !== undefined ? end_date                              : null,
+    uplift_percent         !== undefined ? parseFloat(uplift_percent)            : null,
+    applies_to_sadc        !== undefined ? (applies_to_sadc ? 1 : 0)            : null,
     applies_to_international !== undefined ? (applies_to_international ? 1 : 0) : null,
-    applies_to_channels    !== undefined ? (applies_to_channels ? 1 : 0)      : null,
-    active                 !== undefined ? (active ? 1 : 0)                   : null,
+    applies_to_channels    !== undefined ? (applies_to_channels ? 1 : 0)        : null,
+    active                 !== undefined ? (active ? 1 : 0)                     : null,
+    notes                  !== undefined ? notes                                 : null,
     req.params.id, pid
   );
 
