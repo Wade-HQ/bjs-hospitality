@@ -261,7 +261,7 @@ function BaseRatesTab() {
           {intlSettings && intlForm.markup_percent !== '' && (
             <div className="bg-teal/5 border border-teal/20 rounded-lg p-3 text-sm">
               <span className="text-gray-600">International rate = SADC × {(1 + Number(intlForm.markup_percent) / 100).toFixed(2)} </span>
-              <span className="text-gray-400">(e.g. {fmt(exampleSadc)} → <strong className="text-teal">{fmt(exampleIntl)}</strong>)</span>
+              <span className="text-gray-400">(e.g. {fmt(exampleSadc, property?.currency)} → <strong className="text-teal">{fmt(exampleIntl, property?.currency)}</strong>)</span>
             </div>
           )}
           <div>
