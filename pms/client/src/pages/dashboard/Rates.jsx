@@ -754,7 +754,7 @@ function PlansTab() {
                     className="rounded border-gray-300 text-teal"
                   />
                   <span className="text-sm">{m.name}</span>
-                  <span className="text-xs text-gray-400">{fmt(m.cost_per_person)}/person</span>
+                  <span className="text-xs text-gray-400">{fmt(m.cost_per_person, property?.currency)}/person</span>
                 </label>
               ))}
             </div>
