@@ -288,6 +288,41 @@ function BaseRatesTab() {
           <button onClick={saveIntl} className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium">Save</button>
         </div>
       </Modal>
+
+      {/* Increase All Rates Modal */}
+      <Modal open={increaseModal} onClose={() => setIncreaseModal(false)} title="Increase Base Rates" size="sm">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">% Increase <span className="text-red-500">*</span></label>
+            <input
+              type="number"
+              min="0.1"
+              max="500"
+              step="0.1"
+              value={increasePct}
+              onChange={e => setIncreasePct(e.target.value)}
+              placeholder="e.g. 10"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Effective From (informational)</label>
+            <input
+              type="date"
+              value={increaseDate}
+              onChange={e => setIncreaseDate(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
+            This will update all room base rates immediately. Existing bookings are unaffected.
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6">
+          <button onClick={() => setIncreaseModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
+          <button onClick={applyIncrease} disabled={!increasePct || parseFloat(increasePct) <= 0} className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium disabled:opacity-50">Apply Increase</button>
+        </div>
+      </Modal>
     </div>
   );
 }
