@@ -117,7 +117,12 @@ router.get('/', requireAuth, (req, res) => {
   const params = [PROPERTY_ID()];
   let where = 'b.property_id = ?';
 
-  if (status) { where += ' AND b.status = ?'; params.push(status); }
+  if (status) {
+    where += ' AND b.status = ?';
+    params.push(status);
+  } else {
+    where += " AND b.status NOT IN ('cancelled','no_show')";
+  }
   if (payment_status) { where += ' AND b.payment_status = ?'; params.push(payment_status); }
   if (source) { where += ' AND b.source = ?'; params.push(source); }
   const rtId = room_type_id || room_type;
