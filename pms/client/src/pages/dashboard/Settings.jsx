@@ -214,6 +214,17 @@ export default function Settings() {
     ]},
   ];
 
+  const templateFields = [
+    { k: 'logo_url', l: 'Logo URL', hint: 'Public URL to your property logo (PNG/JPG, ~300×80px)' },
+    { k: 'company_reg', l: 'Company Registration No.' },
+    { k: 'bank_name', l: 'Bank Name' },
+    { k: 'bank_account', l: 'Account Number' },
+    { k: 'bank_branch', l: 'Branch / Sort Code' },
+    { k: 'swift_code', l: 'SWIFT / BIC Code' },
+    { k: 'invoice_footer', l: 'Invoice Footer Text', hint: 'e.g. "Thank you for your stay. All rates are inclusive of VAT."', wide: true },
+    { k: 'quote_validity_days', l: 'Quote Validity (days)', t: 'number', hint: 'How many days a quotation remains valid' },
+  ];
+
   if (!property) return <div className="p-12 text-center text-gray-400">Loading…</div>;
 
   return (
