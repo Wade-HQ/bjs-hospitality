@@ -617,7 +617,7 @@ function PlansTab() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
                 <tr>
-                  {['Plan Name', 'Included Meals', 'SADC (2 adults, 1 night)', 'Intl', 'Website', 'Back Office', 'Active', 'Actions'].map(h => (
+                  {['Plan Name', 'Included Meals', 'Preview (2 adults, 1 night)', 'Website', 'Back Office', 'Active', 'Actions'].map(h => (
                     <th key={h} className="px-4 py-2.5 text-left whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
