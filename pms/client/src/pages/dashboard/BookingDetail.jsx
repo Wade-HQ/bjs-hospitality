@@ -385,6 +385,20 @@ export default function BookingDetail() {
             </select>
           </div>
 
+          {/* Rate Plan */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rate Plan</label>
+            <select value={editForm.rate_plan_id || ''} onChange={e => setEditForm(p => ({...p, rate_plan_id: e.target.value}))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">— Keep existing —</option>
+              {editRatePlans.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.rate_plan_name} — ZAR {Number(p.total_for_stay).toLocaleString()} total
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Source */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
