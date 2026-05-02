@@ -211,7 +211,15 @@ export default function Settings() {
   const duplicateRoom = (r) => {
     const { id, created_at, ...rest } = r;
     const suggestedName = (rest.name || rest.room_number || '') + ' (Copy)';
-    setRoomForm({ ...EMPTY_ROOM, ...rest, name: suggestedName, room_type_id: String(rest.room_type_id || '') });
+    setRoomForm({
+      ...EMPTY_ROOM, ...rest,
+      name: suggestedName,
+      room_type_id: String(rest.room_type_id || ''),
+      show_online: rest.show_online !== 0,
+      wheelchair_accessible: rest.wheelchair_accessible === 1 || rest.wheelchair_accessible === true,
+      description: rest.description || '',
+      amenities_json: rest.amenities_json || '[]',
+    });
     setRoomModal(true);
   };
   const saveRoom = async () => {
