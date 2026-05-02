@@ -22,6 +22,7 @@ import Settings from './pages/dashboard/Settings.jsx';
 
 function ProtectedLayout() {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return (
     <div className="flex items-center justify-center h-screen bg-primary">
       <div className="text-white/70 text-sm animate-pulse">Loading...</div>
