@@ -235,6 +235,7 @@ export default function BookingCalendar({ mode = 'booking', onNewBooking }) {
       await api.post(`/api/bookings/${selectedBooking.id}/check-out`);
       addToast('Checked out successfully');
       setSidebarOpen(false);
+      setSwapMode(false);
       fetchData();
     } catch (err) {
       addToast(err.response?.data?.error || 'Check-out failed', 'error');
