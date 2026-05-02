@@ -407,6 +407,9 @@ export default function BookingDetail() {
                 </option>
               ))}
             </select>
+            {editForm.rate_plan_id && (
+              <p className="text-xs text-gray-400 mt-1">Price recalculated from selected rate plan</p>
+            )}
           </div>
 
           {/* Source */}
