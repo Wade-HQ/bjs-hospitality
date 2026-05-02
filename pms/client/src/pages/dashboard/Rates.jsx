@@ -12,8 +12,8 @@ function tomorrow() {
   return d.toISOString().split('T')[0];
 }
 
-function fmt(x) {
-  return `ZAR ${Number(x || 0).toLocaleString()}`;
+function fmt(x, currency = 'ZAR') {
+  return `${currency} ${Number(x || 0).toLocaleString()}`;
 }
 
 function useDebounce(value, delay) {
