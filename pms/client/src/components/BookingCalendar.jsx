@@ -252,6 +252,7 @@ export default function BookingCalendar({ mode = 'booking', onNewBooking }) {
       await api.post(`/api/bookings/${selectedBooking.id}/cancel`);
       addToast('Booking cancelled');
       setSidebarOpen(false);
+      setSwapMode(false);
       fetchData();
     } catch (err) {
       addToast(err.response?.data?.error || 'Cancel failed', 'error');
