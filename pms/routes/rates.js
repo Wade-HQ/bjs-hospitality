@@ -726,4 +726,19 @@ router.get('/public', (req, res) => {
   return res.json({ rate_plans: results });
 });
 
+// POST /api/rates/base/bulk-increase
+router.post('/base/bulk-increase', requireAuth, requireRole(...WRITE_ROLES), (req, res) => {
+  const db = getDb();
+  const { pct } = req.body;
+  const parsed = parseFloat(pct);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 500) {
+    return res.status(400).json({ error: 'pct must be a positive number (max 500)' });
+  }
+  const multiplier = 1 + parsed / 100;
+  const result = db.prepare(
+    `UPDATE room_base_rates SET rate_per_person = ROUND(rate_per_person * ?) WHERE property_id = ?`
+  ).run(multiplier, PROPERTY_ID());
+  return res.json({ ok: true, rows_updated: result.changes });
+});
+
 module.exports = router;
