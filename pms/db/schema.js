@@ -374,6 +374,39 @@ async function runMigrations(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(channel_id, rate_plan_id)
     );
+
+    CREATE TABLE IF NOT EXISTS quotations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      property_id INTEGER NOT NULL REFERENCES properties(id),
+      quote_ref TEXT UNIQUE NOT NULL,
+      guest_name TEXT,
+      guest_email TEXT,
+      guest_phone TEXT,
+      room_type_id INTEGER REFERENCES room_types(id),
+      room_type_name TEXT,
+      rate_plan_id INTEGER REFERENCES rate_plans(id),
+      rate_plan_name TEXT,
+      check_in TEXT NOT NULL,
+      check_out TEXT NOT NULL,
+      nights INTEGER NOT NULL,
+      adults INTEGER NOT NULL DEFAULT 1,
+      children INTEGER NOT NULL DEFAULT 0,
+      region TEXT DEFAULT 'sadc',
+      channel_id INTEGER,
+      total_per_night REAL,
+      total_for_stay REAL,
+      tax_amount REAL,
+      total_amount REAL,
+      currency TEXT DEFAULT 'ZAR',
+      season_name TEXT,
+      special_requests TEXT,
+      status TEXT DEFAULT 'open' CHECK(status IN ('open','converted','expired','cancelled')),
+      converted_booking_id INTEGER REFERENCES bookings(id),
+      valid_until TEXT,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // ── Column migrations (idempotent — SQLite throws if column already exists) ──
