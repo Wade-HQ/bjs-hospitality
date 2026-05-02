@@ -106,80 +106,13 @@ router.put('/:id', requireAuth, requireRole('owner','hotel_manager'), (req, res)
   return res.json({ room_type: updated });
 });
 
-// GET /api/room-types/:id/rates — fetch both rates for a room type
+// DEPRECATED: room_type_rates table dropped in rates-rebuild migration
+// Use /api/rates/base instead
 router.get('/:id/rates', requireAuth, (req, res) => {
-  const db = getDb();
-  const existing = db.prepare('SELECT id FROM room_types WHERE id = ? AND property_id = ?')
-    .get(req.params.id, PROPERTY_ID());
-  if (!existing) return res.status(404).json({ error: 'Room type not found' });
-
-  const rates = db.prepare(`
-    SELECT * FROM room_type_rates WHERE room_type_id = ? ORDER BY region
-  `).all(req.params.id);
-
-  // Ensure both regions exist — create missing ones with 0
-  const regions = ['international', 'sadc'];
-  const result = {};
-  for (const region of regions) {
-    const r = rates.find(x => x.region === region);
-    if (r) {
-      result[region] = r;
-    } else {
-      const ins = db.prepare(`
-        INSERT INTO room_type_rates (room_type_id, region, rate_per_person)
-        VALUES (?, ?, 0)
-      `).run(req.params.id, region);
-      result[region] = db.prepare('SELECT * FROM room_type_rates WHERE id = ?').get(ins.lastInsertRowid);
-    }
-  }
-
-  return res.json({ rates: result });
+  res.status(410).json({ error: 'Legacy rates endpoint removed — use /api/rates/base instead' });
 });
-
-// PUT /api/room-types/:id/rates/:region — update a rate
-router.put('/:id/rates/:region', requireAuth, requireRole('owner', 'hotel_manager'), (req, res) => {
-  const db = getDb();
-  const { region } = req.params;
-  if (!['international', 'sadc'].includes(region)) {
-    return res.status(400).json({ error: 'region must be international or sadc' });
-  }
-
-  const existing = db.prepare('SELECT id FROM room_types WHERE id = ? AND property_id = ?')
-    .get(req.params.id, PROPERTY_ID());
-  if (!existing) return res.status(404).json({ error: 'Room type not found' });
-
-  const {
-    rate_per_person, single_supplement_multiplier, children_pct,
-    is_online, is_sto, is_agent, is_ota
-  } = req.body;
-
-  // Upsert
-  db.prepare(`
-    INSERT INTO room_type_rates (room_type_id, region, rate_per_person, single_supplement_multiplier, children_pct, is_online, is_sto, is_agent, is_ota)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(room_type_id, region) DO UPDATE SET
-      rate_per_person = excluded.rate_per_person,
-      single_supplement_multiplier = excluded.single_supplement_multiplier,
-      children_pct = excluded.children_pct,
-      is_online = excluded.is_online,
-      is_sto = excluded.is_sto,
-      is_agent = excluded.is_agent,
-      is_ota = excluded.is_ota,
-      updated_at = CURRENT_TIMESTAMP
-  `).run(
-    req.params.id, region,
-    rate_per_person !== undefined ? parseFloat(rate_per_person) : 0,
-    single_supplement_multiplier !== undefined ? parseFloat(single_supplement_multiplier) : 1.5,
-    children_pct !== undefined ? parseFloat(children_pct) : 50,
-    is_online !== undefined ? (is_online ? 1 : 0) : 1,
-    is_sto !== undefined ? (is_sto ? 1 : 0) : 1,
-    is_agent !== undefined ? (is_agent ? 1 : 0) : 1,
-    is_ota !== undefined ? (is_ota ? 1 : 0) : 1
-  );
-
-  const updated = db.prepare('SELECT * FROM room_type_rates WHERE room_type_id = ? AND region = ?')
-    .get(req.params.id, region);
-  return res.json({ rate: updated });
+router.put('/:id/rates/:region', requireAuth, (req, res) => {
+  res.status(410).json({ error: 'Legacy rates endpoint removed — use /api/rates/base instead' });
 });
 
 // DELETE /api/room-types/:id
